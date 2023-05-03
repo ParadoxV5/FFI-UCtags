@@ -1,0 +1,34 @@
+version: 2
+#
+#registries:
+#  github:
+#    type: rubygems-server
+#    url: https://rubygems.pkg.github.com/ParadoxV5
+#    token: ${{ secrets.GITHUB_TOKEN }}
+#
+updates:
+
+- package-ecosystem: github-actions
+  directory: /
+  ignore:
+  - update-types: [version-update:semver-minor, version-update:semver-patch]
+    dependency-name: '*'
+  schedule:
+    interval: monthly
+
+- package-ecosystem: bundler
+  #registries: [github]
+  #insecure-external-code-execution: allow
+  directory: /
+  ignore:
+  - update-types: [version-update:semver-patch]
+    dependency-name: '*'
+  schedule:
+    interval: weekly
+  assignees: [ParadoxV5]
+#
+#- package-ecosystem: gitsubmodule
+#  directory: /
+#  schedule:
+#    interval: weekly
+#  assignees: [ParadoxV5]
