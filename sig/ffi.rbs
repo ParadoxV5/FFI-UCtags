@@ -1,0 +1,4 @@
+# Select stubs
+module FFI
+  
+end

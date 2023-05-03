@@ -1,11 +1,4 @@
 version: 2
-#
-#registries:
-#  github:
-#    type: rubygems-server
-#    url: https://rubygems.pkg.github.com/ParadoxV5
-#    token: ${{ secrets.GITHUB_TOKEN }}
-#
 updates:
 
 - package-ecosystem: github-actions
@@ -26,9 +19,3 @@ updates:
   schedule:
     interval: weekly
   assignees: [ParadoxV5]
-#
-#- package-ecosystem: gitsubmodule
-#  directory: /
-#  schedule:
-#    interval: weekly
-#  assignees: [ParadoxV5]
