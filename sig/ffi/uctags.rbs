@@ -3,4 +3,7 @@ class FFI::UCTags
   
   @ns: Module
   def initialize: (?Module namespace) -> void
+
+  def call: (_ToS lib_path, _ToS header_path) -> Module
+  def self.call: (_ToS lib_path, _ToS header_path, ?namespace: Module) -> Module
 end
