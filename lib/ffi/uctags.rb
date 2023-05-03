@@ -10,15 +10,15 @@ class FFI::UCTags
     @ns = (FFI >= namespace) ? namespace : Module.new.include(namespace, FFI)
   end
   
+  # noinspection SpellCheckingInspection
+  COMMAND = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -].freeze
   #TODO: merge args
   # @param header_path TODO: smart find
   def call(lib_path, header_path)
     lib = Module.new.extend(@ns::Library)
     lib.ffi_lib lib_path
     builder = Builder.new(lib)
-    # noinspection SpellCheckingInspection
-    cmd = "ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo - #{header_path}"
-    IO.popen(cmd) do|cmd_out|
+    IO.popen(COMMAND + [header_path], err: :err) do|cmd_out|
       cmd_out.each_line(chomp: true) do|line|
         name, file, line, k, *fields = line.split("\t")
         puts "processing `#{name}` of kind `#{k}` (#{file}@#{line})" if $VERBOSE

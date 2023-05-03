@@ -2,6 +2,7 @@ class FFI::UCTags
   type library = Module & FFI::Library
   
   VERSION: String
+  COMMAND: Array[String]
   
   @ns: Module
   def initialize: (?Module namespace) -> void
