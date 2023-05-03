@@ -1,9 +1,11 @@
 class FFI::UCTags
+  type library = Module & FFI::Library
+  
   VERSION: String
   
   @ns: Module
   def initialize: (?Module namespace) -> void
-
-  def call: (_ToS lib_path, _ToS header_path) -> Module
-  def self.call: (_ToS lib_path, _ToS header_path, ?namespace: Module) -> Module
+  
+  def call: (_ToS lib_path, _ToS header_path) -> library
+  def self.call: (_ToS lib_path, _ToS header_path, ?namespace: Module) -> library
 end

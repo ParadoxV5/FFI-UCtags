@@ -1,0 +1,6 @@
+class FFI::UCTags::Builder
+  @lib: FFI::UCTags::library
+  def initialize: (FFI::UCTags::library lib) -> void
+  
+  def typeref: (Hash[String, String] fields) -> FFI::Type
+end

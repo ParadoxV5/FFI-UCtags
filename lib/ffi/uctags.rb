@@ -1,4 +1,6 @@
+# frozen_string_literal: true
 require 'ffi'
+require_relative 'uctags/builder'
 
 class FFI::UCTags
   def initialize(namespace = FFI)
@@ -13,8 +15,8 @@ class FFI::UCTags
   def call(lib_path, header_path)
     lib = Module.new.extend(@ns::Library)
     lib.ffi_lib lib_path
-    
-    context = nil
+    builder = Builder.new(lib)
+    # noinspection SpellCheckingInspection
     cmd = "ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo - #{header_path}"
     IO.popen(cmd) do|cmd_out|
       cmd_out.each_line(chomp: true) do|line|
@@ -41,6 +43,7 @@ class FFI::UCTags
         end
       end
     end
+    lib
   end
   def self.call(*args, namespace: FFI) = new(namespace).(*args)
 end
