@@ -2,5 +2,16 @@ class FFI::UCTags::Builder
   @lib: FFI::UCTags::library
   def initialize: (FFI::UCTags::library lib) -> void
   
+  @prefix: Array[untyped]
+  def prefix: (*top prefixes) -> void
+  @suffix: Array[untyped]
+  def suffix: (*top suffixes) -> void
+  @args: Array[untyped]
+  def <<: (top arg) -> void
+  
+  @receiver: untyped?
+  @method: Object::name?
+  
   def typeref: (Hash[String, String] fields) -> FFI::Type
+  def call: (?top receiver, Object::name? method) -> void
 end

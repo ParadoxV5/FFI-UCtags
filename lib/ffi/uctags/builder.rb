@@ -20,6 +20,16 @@ module FFI
           @lib.const_get(name).by_value
         end
       end
+      
+      def prefix(*prefixes) = @prefix = prefixes
+      def suffix(*suffixes) = @suffix = suffixes
+      def <<(arg) = @args << arg
+      def call(receiver = @lib, method = nil)
+        @receiver.public_send(@method, *@prefix, @args, *@suffix) if @method
+        @receiver, @method = receiver, method
+        @prefix, @suffix, @args = [], [], []
+      end
+      
     end
     private_constant :Builder
   end
