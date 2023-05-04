@@ -26,23 +26,35 @@ class FFI::UCTags
         case k
           
           # Functions
-          #TODO when 'p' # function prototypes
-          #TODO when 'z' # function parameters inside function or prototype definitions
+          when 'z' # function parameters inside function or prototype definitions
+            builder << builder.typeref(fields)
+          when 'p' # function prototypes
+            builder.call :attach_function
+            builder.prefix name
+            builder.suffix builder.typeref(fields)
           
           # Structs/Unions
-          #TODO when 's' # structure names
-          #TODO when 'u' # union names
-          #TODO when 'm' # struct, and union members
+          when 'm' # struct, and union members
+            builder << name.to_sym
+            builder << builder.typeref(fields)
+          when 's' # structure names
+            builder.call lib.const_set(name, @ns::Struct.new), :layout
+          when 'u' # union names
+            builder.call lib.const_set(name, @ns::Union.new), :layout
           
           # Miscellaneous
-          #TODO when 't' # typedefs
-          #TODO when 'x' # external and forward variable declarations
-          
+          when 't' # typedefs
+            builder.call
+            lib.typedef name.to_sym, builder.typeref(fields)
+          when 'x' # external and forward variable declarations
+            builder.call
+            lib.attach_variable name, builder.typeref(fields)
         else
           warn "\tunsupported kind ignored" if $VERBOSE
         end
       end
     end
+    builder.call
     lib
   end
   def self.call(*args, namespace: FFI) = new(namespace).(*args)
