@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module FFI
-  module UCTags
+  class UCTags
     class Builder
       def initialize(lib)
         @lib = lib
@@ -24,12 +24,19 @@ module FFI
       def prefix(*prefixes) = @prefix = prefixes
       def suffix(*suffixes) = @suffix = suffixes
       def <<(arg) = @args << arg
-      def call(receiver = @lib, method = nil)
-        @receiver.public_send(@method, *@prefix, @args, *@suffix) if @method
+      
+      def open(receiver = @lib, method)
+        if @method
+          if @prefix.empty? and @suffix.empty?
+            @receiver.public_send(@method, *@args)
+          else
+            @receiver.public_send(@method, *@prefix, @args, *@suffix)
+          end
+        end
         @receiver, @method = receiver, method
         @prefix, @suffix, @args = [], [], []
       end
-      
+      def close = open nil, nil
     end
     private_constant :Builder
   end

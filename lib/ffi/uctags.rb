@@ -21,7 +21,7 @@ class FFI::UCTags
     IO.popen(COMMAND + [header_path], err: :err) do|cmd_out|
       cmd_out.each_line(chomp: true) do|line|
         name, file, line, k, *fields = line.split("\t")
-        puts "processing `#{name}` of kind `#{k}` (#{file}@#{line})" if $VERBOSE
+        puts "processing `#{name}` of kind `#{k}` (#{file}@#{line[...-2]})" if $VERBOSE
         fields = fields.to_h { _1.split(':', 2) }
         case k
           
@@ -29,7 +29,7 @@ class FFI::UCTags
           when 'z' # function parameters inside function or prototype definitions
             builder << builder.typeref(fields)
           when 'p' # function prototypes
-            builder.call :attach_function
+            builder.open :attach_function
             builder.prefix name
             builder.suffix builder.typeref(fields)
           
@@ -38,23 +38,23 @@ class FFI::UCTags
             builder << name.to_sym
             builder << builder.typeref(fields)
           when 's' # structure names
-            builder.call lib.const_set(name, @ns::Struct.new), :layout
+            builder.open lib.const_set(name, Class.new(@ns::Struct)), :layout
           when 'u' # union names
-            builder.call lib.const_set(name, @ns::Union.new), :layout
+            builder.open lib.const_set(name, Class.new(@ns::Union)), :layout
           
           # Miscellaneous
           when 't' # typedefs
-            builder.call
-            lib.typedef name.to_sym, builder.typeref(fields)
+            builder.close
+            lib.typedef builder.typeref(fields), name.to_sym
           when 'x' # external and forward variable declarations
-            builder.call
+            builder.close
             lib.attach_variable name, builder.typeref(fields)
         else
           warn "\tunsupported kind ignored" if $VERBOSE
         end
       end
     end
-    builder.call
+    builder.close
     lib
   end
   def self.call(*args, namespace: FFI) = new(namespace).(*args)

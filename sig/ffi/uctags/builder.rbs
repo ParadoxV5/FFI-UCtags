@@ -13,5 +13,6 @@ class FFI::UCTags::Builder
   @method: Object::name?
   
   def typeref: (Hash[String, String] fields) -> FFI::Type
-  def call: (?top receiver, Object::name? method) -> void
+  def open: (?top receiver, Object::name? method) -> void
+  def close: -> untyped
 end
