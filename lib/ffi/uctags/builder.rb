@@ -2,6 +2,7 @@
 
 module FFI
   class UCTags
+    # Helper for {FFI::UCTags}. Indefinite API – not for external use (yet?).
     class Builder
       def initialize(lib)
         @lib = lib
