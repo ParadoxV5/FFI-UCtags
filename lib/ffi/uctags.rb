@@ -1,8 +1,26 @@
 # frozen_string_literal: true
 require 'ffi'
+require_relative 'uctags/version'
 require_relative 'uctags/builder'
 
+# Auto-load FFI functions and etc. by parsing a C header file. See:
+# * [the README](..) for an overview of the gem
+# * {.call} for an excellent starting point of your exploration
 class FFI::UCTags
+  # Create an instance for the provided namespace,
+  # which will be where {#call} will source modules and classes *(but not constants)* from.
+  # This enables utilization with alternate FFI implementations such as
+  # [FFI-Plus](https://github.com/ParadoxV5/FFI-Plus) and [Nice-FFI](https://github.com/sparkchaser/nice-ffi),
+  # assuming they have the same module/class layout and functionalities as FFI.
+  # 
+  # The namespace does not have to cover all {FFI} modules/classes, e.g., by `include`ing {FFI}.
+  # {#call} will fall back to source from {FFI} for modules/classes not found from the namespace.
+  # 
+  # Instantiating before {#call}ing allows the same namespace to load multiple
+  # [namespace`::Library`](https://rubydoc.info/gems/ffi/FFI/Library)s.
+  # {::call} is an alternative for one-time uses that hides the instantiation.
+  # 
+  # @param namespace must be a module, not a class
   def initialize(namespace = FFI)
     if !namespace.is_a? Module or namespace.is_a? Class
       raise "wrong argument type #{namespace.class} (expected Module)"
@@ -10,13 +28,25 @@ class FFI::UCTags
     @ns = (FFI >= namespace) ? namespace : Module.new.include(namespace, FFI)
   end
   
+  # The command stub {#call} invokes, for your reference
+  # 
   # noinspection SpellCheckingInspection
   COMMAND = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -].freeze
-  #TODO: merge args
-  # @param header_path TODO: smart find
-  def call(lib_path, header_path)
+  
+  # Create a new [namespace`::Library`](https://rubydoc.info/gems/ffi/FFI/Library) module,
+  # [load](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method) the library given by `library_name`,
+  # and {COMMAND utilize `ctags`} to parse the C header located at `header_path`.
+  # 
+  # See
+  # * [`README.md`](..) for a list of supported and not-supported constructs
+  # * {#initialize} for the role of the namespace
+  # 
+  # @return the new `Library` module with every supported construct imported
+  # @see ::call
+  def call(library_name, header_path)
+    #TODO: merge args; smart find
     lib = Module.new.extend(@ns::Library)
-    lib.ffi_lib lib_path
+    lib.ffi_lib library_name
     builder = Builder.new(lib)
     IO.popen(COMMAND + [header_path], err: :err) do|cmd_out|
       cmd_out.each_line(chomp: true) do|line|
@@ -57,7 +87,14 @@ class FFI::UCTags
     builder.close
     lib
   end
+  
+  # Create a temporary instance for the given `namespace` to {#call} with the remaining `args`.
+  # See {#initialize} for the role of the namespace and {#call} for the main function of this gem.
+  # 
+  # ```ruby
+  # require 'ffi/uctags'
+  # MyLib = FFI::UCTags.('mylib', 'path/to/mylib.h')
+  # puts MyLib.my_function(…)
+  # ```
   def self.call(*args, namespace: FFI) = new(namespace).(*args)
 end
-
-require_relative 'uctags/version'
