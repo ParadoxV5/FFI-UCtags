@@ -1,3 +1,57 @@
+FFI-UCTags for Ruby is a programmatic utility that
+[loads an FFI library](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method)
+by reading a list of constructs to import off a C header file.
+
+**Prerequisite:** [Universal Ctags](https://ctags.io/) (v5.9.0 tested) – does the heavy-lifting of parsing the header.
+
+**Caution:** Currently, this project does not have automated testing (insights welcome!),
+instead relies on code review and small test subjects.
+
+
+## Constructs & Ctags kinds support
+
+### ☑️️ Developed
+* Function Prototypes
+  * `p` function prototypes
+  * `z` function parameters inside function or prototype definitions
+* Miscellaneous
+  * `t` typedefs
+  * `x` external and forward variable declarations
+
+### 📝 Developing
+* C Types
+  * no support yet for multi-word types, e.g., `unsigned int`
+* Structs/Unions
+  * `m` struct, and union members
+  * `s` structure names
+  * `u` union names
+  * currently only recognizes pass-by-value and treats pass-by-reference the same as other generic pointers
+  * currently crashes on anonymous structs/unions or ones with non-capitalized names
+
+### 🔜 To Do
+* Varargs
+* Enums
+  * `e` enumerators (values inside an enumeration)
+  * `g` enumeration names
+* Literal Macros (macro-defined constants)
+  * `d` macro definitions
+
+### ⏳ No Plans Yet
+* FFI Types `:string`, `:strptr` and `:buffer_*`
+* Import referenced headers (i.e., nested imports)
+  * `h` included header files
+* Definitions (C headers are supposed to only have declarations)
+  * `f` function definitions
+  * `v` variable definitions
+* Parameterized Macros
+  * `D` parameters inside macro definitions
+
+### 🧊 Nope
+* Non-literal Macros (i.e., C code macros)
+* Miscellaneous Ctags Kinds
+  * `L` goto labels
+
+
 ## License
 
 Copyright 2023 ParadoxV5

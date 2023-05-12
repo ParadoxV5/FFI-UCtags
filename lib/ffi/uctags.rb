@@ -18,7 +18,7 @@ class FFI::UCTags
   # 
   # Instantiating before {#call}ing allows the same namespace to load multiple
   # [namespace`::Library`](https://rubydoc.info/gems/ffi/FFI/Library)s.
-  # {::call} is an alternative for one-time uses that hides the instantiation.
+  # The class method {.call} is an alternative for one-time uses that hides the instantiation.
   # 
   # @param namespace must be a module, not a class
   def initialize(namespace = FFI)
@@ -38,11 +38,11 @@ class FFI::UCTags
   # and {COMMAND utilize `ctags`} to parse the C header located at `header_path`.
   # 
   # See
-  # * [`README.md`](..) for a list of supported and not-supported constructs
+  # * [the Constructs section of the README](..#constructs--ctags-kinds-support) for a list of supported constructs
   # * {#initialize} for the role of the namespace
+  # * The class method {.call}
   # 
   # @return the new `Library` module with every supported construct imported
-  # @see ::call
   def call(library_name, header_path)
     #TODO: merge args; smart find
     lib = Module.new.extend(@ns::Library)
