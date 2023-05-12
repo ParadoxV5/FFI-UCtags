@@ -4,6 +4,6 @@
 # Check out [the FFI wiki](https://github.com/ffi/ffi/wiki) for guides on the FFI gem.
 module FFI
   class UCTags
-    VERSION = '0.0.0'
+    VERSION = '0.0.1'
   end
 end
