@@ -11,7 +11,7 @@ class FFI::UCTags
     #noinspection RubyResolve
     def typeref(fields)
       type, name = fields.fetch('typeref').split(':', 2)
-      if 'typename'.eql? type
+      if 'typename'.eql? type # non-derived type
         case name
         when /[*\[]/ # `t *`, `t []`, `t (*) []`, `t (*)(…)`, etc.
           FFI::TYPE_POINTER
@@ -20,7 +20,8 @@ class FFI::UCTags
         when 'long double'
           FFI::TYPE_LONGDOUBLE
         else
-          # Check multi-keyword integer types (duplicate `t` capture name is intentional)
+          # Check multi-keyword integer types (does not match unconventional styles such as `int long untyped long`)
+          # duplicate `t` capture name is intentional
           if /\A((?<unsigned>un)?signed )?((?<int_type>long|short|long long)( int)?|(?<int_type>int|char))\z/ =~ name
             int_type.tr!(' ', '_') # namely `long long` -> 'long_long'
             unsigned ? :"u#{int_type}" : int_type.to_sym
@@ -35,7 +36,7 @@ class FFI::UCTags
             FFI::TYPE_POINTER
           end
         end
-      else
+      else # `struct` or `union` (`enum` not yet supported)
         @lib.const_get(name).by_value
       end
     end

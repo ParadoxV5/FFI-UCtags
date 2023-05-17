@@ -29,7 +29,7 @@ class FFI::UCTags
   end
   
   # The command stub {#call} invokes, for your reference
-  # 
+  #
   #noinspection SpellCheckingInspection
   COMMAND = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -].freeze
   
@@ -44,10 +44,12 @@ class FFI::UCTags
   # 
   # @return the new `Library` module with every supported construct imported
   def call(library_name, header_path)
-    lib = Module.new.extend(@ns::Library)
+    lib = Module.new
+    lib.extend(@ns::Library)
     lib.ffi_lib library_name
     builder = Builder.new(lib)
     
+    # Run and pipe-read. `err: :err` connects command stderr to Ruby stderr
     IO.popen(COMMAND + [header_path], err: :err) do|cmd_out|
       cmd_out.each_line(chomp: true) do|line|
         # Note for maintainers: Like Ruby, C doesn’t allow use before declaration (except for functions pre-C11),

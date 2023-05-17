@@ -19,6 +19,7 @@ instead relies on code review and small test subjects.
 ## Constructs & Ctags kinds support
 
 ### ☑️️ Developed
+* Recognition of basic C types (`unsigned char`, `int8_t`, etc.)
 * Function Prototypes
   * `p` function prototypes
   * `z` function parameters inside function or prototype definitions
@@ -27,8 +28,6 @@ instead relies on code review and small test subjects.
   * `x` external and forward variable declarations
 
 ### 📝 Developing
-* C Types
-  * no support yet for multi-word types, e.g., `unsigned int`
 * Structs/Unions
   * `m` struct, and union members
   * `s` structure names
@@ -41,7 +40,7 @@ instead relies on code review and small test subjects.
   * `g` enumeration names
 * Literal Macros (macro-defined constants)
   * `d` macro definitions
-* FFI callbacks (wraps pointer to functions)
+* FFI callbacks (wraps pointer to functions) and auto-cast for struct/union pointers
 
 ### ⏳ No Plans Yet
 * Variadic args
