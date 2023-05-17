@@ -30,7 +30,7 @@ class FFI::UCTags
   
   # The command stub {#call} invokes, for your reference
   # 
-  # noinspection SpellCheckingInspection
+  #noinspection SpellCheckingInspection
   COMMAND = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -].freeze
   
   # Create a new [namespace`::Library`](https://rubydoc.info/gems/ffi/FFI/Library) module,
@@ -44,7 +44,6 @@ class FFI::UCTags
   # 
   # @return the new `Library` module with every supported construct imported
   def call(library_name, header_path)
-    #TODO: merge args; smart find
     lib = Module.new.extend(@ns::Library)
     lib.ffi_lib library_name
     builder = Builder.new(lib)

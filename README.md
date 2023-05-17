@@ -33,18 +33,18 @@ instead relies on code review and small test subjects.
   * `m` struct, and union members
   * `s` structure names
   * `u` union names
-  * currently only recognizes pass-by-value and treats pass-by-reference the same as other generic pointers
   * currently crashes on anonymous structs/unions or ones with non-capitalized names
 
 ### 🔜 To Do
-* Varargs
 * Enums
   * `e` enumerators (values inside an enumeration)
   * `g` enumeration names
 * Literal Macros (macro-defined constants)
   * `d` macro definitions
+* FFI callbacks (wraps pointer to functions)
 
 ### ⏳ No Plans Yet
+* Variadic args
 * FFI Types `:string`, `:strptr` and `:buffer_*`
 * Import referenced headers (i.e., nested imports)
   * `h` included header files
