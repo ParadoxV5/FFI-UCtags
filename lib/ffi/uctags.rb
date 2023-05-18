@@ -1,4 +1,19 @@
 # frozen_string_literal: true
+
+# pre-check – fail fast if u-ctags not found
+begin
+  IO.popen(%w[ctags --version], err: :err) do|cmd_out|
+    cmd_out = cmd_out.gets
+    if cmd_out
+      puts cmd_out if $VERBOSE
+      break if cmd_out.start_with?('Universal Ctags')
+    end
+    raise LoadError, 'installed `ctags` is not Universal Ctags?'
+  end
+rescue SystemCallError
+  raise LoadError, 'is Universal Ctags installed?'
+end
+
 require 'ffi'
 require_relative 'uctags/version'
 require_relative 'uctags/builder'
@@ -58,32 +73,32 @@ class FFI::UCTags
         puts "processing `#{name}` of kind `#{k}` (#{file}@#{line[...-2]})" if $VERBOSE
         fields = fields.to_h { _1.split(':', 2) }
         case k
-          
-          # Functions
-          when 'z' # function parameters inside function or prototype definitions
-            builder << builder.typeref(fields)
-          when 'p' # function prototypes
-            builder.open :attach_function
-            builder.prefix name
-            builder.suffix builder.typeref(fields)
-          
-          # Structs/Unions
-          when 'm' # struct, and union members
-            builder << name.to_sym
-            builder << builder.typeref(fields)
-          when 's' # structure names
-            builder.open lib.const_set(name, Class.new(@ns::Struct)), :layout
-          when 'u' # union names
-            builder.open lib.const_set(name, Class.new(@ns::Union)), :layout
-          
-          # Miscellaneous
-          when 't' # typedefs
-            builder.close
-            lib.typedef builder.typeref(fields), name.to_sym
-          when 'x' # external and forward variable declarations
-            builder.close
-            lib.attach_variable name, builder.typeref(fields)
-          
+        
+        # Functions
+        when 'z' # function parameters inside function or prototype definitions
+          builder << builder.typeref(fields)
+        when 'p' # function prototypes
+          builder.open :attach_function
+          builder.prefix name
+          builder.suffix builder.typeref(fields)
+        
+        # Structs/Unions
+        when 'm' # struct, and union members
+          builder << name.to_sym
+          builder << builder.typeref(fields)
+        when 's' # structure names
+          builder.open lib.const_set(name, Class.new(@ns::Struct)), :layout
+        when 'u' # union names
+          builder.open lib.const_set(name, Class.new(@ns::Union)), :layout
+        
+        # Miscellaneous
+        when 't' # typedefs
+          builder.close
+          lib.typedef builder.typeref(fields), name.to_sym
+        when 'x' # external and forward variable declarations
+          builder.close
+          lib.attach_variable name, builder.typeref(fields)
+        
         else
           warn "\tunsupported kind ignored" if $VERBOSE
         end
