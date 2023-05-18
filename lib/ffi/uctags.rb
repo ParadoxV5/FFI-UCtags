@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# pre-check – fail fast if u-ctags not found
+# pre-check – fail fast (raise `LoadError`) if u-ctags not found
 begin
   IO.popen(%w[ctags --version], err: :err) do|cmd_out|
     cmd_out = cmd_out.gets
@@ -61,7 +61,7 @@ class FFI::UCTags
     
     #noinspection SpellCheckingInspection
     cmd = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -]
-    cmd << '-V' if $DEBUG and $VERBOSE
+    cmd << '-V' if $DEBUG
     cmd << header_path
     # Run and pipe-read. `err: :err` connects command stderr to Ruby stderr
     IO.popen(cmd, err: :err) do|cmd_out|
