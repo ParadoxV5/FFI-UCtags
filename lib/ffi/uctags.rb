@@ -43,11 +43,6 @@ class FFI::UCTags
     @ns = (FFI >= namespace) ? namespace : Module.new.include(namespace, FFI)
   end
   
-  # The command stub {#call} invokes, for your reference
-  #
-  #noinspection SpellCheckingInspection
-  COMMAND = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -].freeze
-  
   # Create a new [namespace`::Library`](https://rubydoc.info/gems/ffi/FFI/Library) module,
   # [load](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method) the library given by `library_name`,
   # and {COMMAND utilize `ctags`} to parse the C header located at `header_path`.
@@ -64,8 +59,12 @@ class FFI::UCTags
     lib.ffi_lib library_name
     builder = Builder.new(lib)
     
+    #noinspection SpellCheckingInspection
+    cmd = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -]
+    cmd << '-V' if $DEBUG and $VERBOSE
+    cmd << header_path
     # Run and pipe-read. `err: :err` connects command stderr to Ruby stderr
-    IO.popen(COMMAND + [header_path], err: :err) do|cmd_out|
+    IO.popen(cmd, err: :err) do|cmd_out|
       cmd_out.each_line(chomp: true) do|line|
         # Note for maintainers: Like Ruby, C doesn’t allow use before declaration (except for functions pre-C11),
         # so we don’t need to worry about types used before they’re loaded as that’d be the library’s fault.
