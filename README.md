@@ -2,7 +2,7 @@ FFI-UCTags for Ruby is a utility gem that
 [loads an FFI library](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method)
 by reading a list of constructs to import off a C header file.
 
-**Prerequisite:** [Universal Ctags](https://ctags.io) (v5.9.0 tested) – does the heavy-lifting of parsing the header.
+**Prerequisite:** [Universal Ctags](https://ctags.io) (v6.0.0 tested) – does the heavy-lifting of parsing the header.
 This gem doesn’t bundle u-ctags for the time being (insights welcome!);
 requiring *the user* to separately install u-ctags impacts the distribution of the gem ports.
 
@@ -43,6 +43,8 @@ instead relies on code review and small test subjects.
 * FFI callbacks (wraps pointer to functions) and auto-cast for struct/union pointers
 
 ### ⏳ No Plans Yet
+* Enums that aren’t simply `0...size`
+  * Let me or the u-ctags team know if this is a much-wanted feature.
 * Variadic args
 * FFI Types `:string`, `:strptr` and `:buffer_*`
 * Import referenced headers (i.e., nested imports)
