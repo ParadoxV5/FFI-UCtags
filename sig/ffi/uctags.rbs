@@ -1,4 +1,4 @@
-class FFI::UCTags
+class FFI::UCtags
   type ffi_library = Module & FFI::Library
   
   VERSION: String

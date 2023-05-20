@@ -21,11 +21,11 @@ require_relative 'uctags/version'
 # 
 # Most use cases are only concerned with the main method {.call} and perhaps {.ffi_module} customization.
 # Other class and instance methods (most of them private) are for advanced uses such as extending the gem.
-class FFI::UCTags
+class FFI::UCtags
   class << self
     # The module for {.call} to source modules and classes *(but not constants)* from; the default is {FFI}.
     # 
-    # Configure this attribute to have UCTags use an alternate FFI implementation of preference, such as
+    # Configure this attribute to use an alternate FFI implementation of preference, such as
     # [FFI-Plus](https://github.com/ParadoxV5/FFI-Plus) or [Nice-FFI](https://github.com/sparkchaser/nice-ffi).
     # 
     # The customized module does not have to cover all utilized FFI modules/classes –
@@ -57,7 +57,7 @@ class FFI::UCTags
     # 
     # ```ruby
     # require 'ffi/uctags'
-    # MyLib = FFI::UCTags.('mylib', 'path/to/mylib.h')
+    # MyLib = FFI::UCtags.('mylib', 'path/to/mylib.h')
     # puts MyLib.my_function(…)
     # ```
     # 

@@ -3,7 +3,7 @@
 # The parent namespace which this gem integrates with.
 # Check out [the FFI wiki](https://github.com/ffi/ffi/wiki) for guides on the FFI gem.
 module FFI
-  class UCTags
+  class UCtags
     VERSION = '1.0.0-SNAPSHOT'
   end
 end

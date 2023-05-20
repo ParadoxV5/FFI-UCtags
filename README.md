@@ -1,4 +1,4 @@
-FFI-UCTags for Ruby is a utility gem that
+FFI-UCtags for Ruby is a utility gem that
 [loads an FFI library](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method)
 by reading a list of constructs to import off a C header file.
 
