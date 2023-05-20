@@ -5,6 +5,7 @@ class FFI::UCTags
   COMMAND: Array[String]
   
   attr_accessor self.namespace: Module
+  def self.ns_const: (Object::name name) -> bot
   
   def initialize: (?Module namespace) -> void
   
