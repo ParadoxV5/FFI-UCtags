@@ -1,5 +1,5 @@
 class FFI::UCTags
-  type library = Module & FFI::Library
+  type ffi_library = Module & FFI::Library
   
   VERSION: String
   COMMAND: Array[String]
@@ -7,10 +7,10 @@ class FFI::UCTags
   attr_accessor self.ffi_module: Module
   
   def self.ffi_const: (Object::name name) -> bot
-  def self.call: (_ToS lib_path, _ToS header_path, ?namespace: Module) -> library
+  def self.call: (_ToS lib_path, _ToS header_path, ?namespace: Module) -> ffi_library
   
-  @lib: library
-  def initialize: (library lib) -> void
+  attr_accessor library: ffi_library
+  def initialize: (ffi_library lib) -> void
   
   @prefix: Array[untyped]
   def prefix: (*top prefixes) -> void

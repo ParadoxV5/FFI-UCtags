@@ -121,10 +121,13 @@ class FFI::UCTags
   # Initialize class variable
   self.ffi_module = FFI
   
+  # The [`Library`](https://rubydoc.info/gems/ffi/FFI/Library) module this instance is working on
+  attr_reader :library
+  
   ## Indefinite API follows ##
   
   def initialize(lib)
-    @lib = lib
+    @library = lib
   end
   
   #noinspection RubyResolve
@@ -147,7 +150,7 @@ class FFI::UCTags
         else
           name.to_sym # Fall back to type map
         end.then do|name_sym|
-          @lib.find_type(name_sym)
+          @library.find_type(name_sym)
         rescue TypeError
           # Assume the unknown type is a pointer alias defined in another file.
           # This should just propagate an exception once multi-file parsing is supported.
@@ -156,7 +159,7 @@ class FFI::UCTags
         end
       end
     else # `struct` or `union` (`enum` not yet supported)
-      @lib.const_get(name).by_value
+      @library.const_get(name).by_value
     end
   end
   
@@ -164,7 +167,7 @@ class FFI::UCTags
   def suffix(*suffixes) = @suffix = suffixes
   def <<(arg) = @args << arg
   
-  def open(receiver = @lib, method)
+  def open(receiver = @library, method)
     if @method
       if @prefix.empty? and @suffix.empty?
         @receiver.public_send(@method, *@args)
