@@ -32,7 +32,7 @@ class FFI::UCTags
     # {.call} will fall back to source from FFI for modules/classes not found from this module (see {.ffi_const}).
     # However, those that the module do provide must match in layouts and functionalities as those of {FFI}.
     # 
-    # @return [Module]
+    # @return [Module & FFI::Library]
     attr_reader :ffi_module
     def ffi_module=(ffi_module)
       unless ffi_module.is_a? Module
@@ -42,6 +42,9 @@ class FFI::UCTags
     end
     
     # Look up the named constant from {.ffi_module} or its ancestors, or from {FFI} if not found in that module.
+    # 
+    # @param name [Symbol | string]
+    # @return [bot]
     def ffi_const(name)
       ffi_module.const_get(name, true)
     rescue NameError
@@ -58,16 +61,16 @@ class FFI::UCTags
     # puts MyLib.my_function(…)
     # ```
     # 
-    # @return [Module]
+    # @param library_name [_ToS]
+    # @param header_path [_ToS]
+    # @return [Module & FFI::Library]
     #   the new `Library` module with every supported construct imported
     #   (See [the README section](..#constructs--ctags-kinds-support) for a list of supported constructs)
     # 
     # @see .ffi_module
     def call(library_name, header_path)
-      lib = Module.new
-      lib.extend(ffi_const :Library)
-      lib.ffi_lib library_name
-      builder = new(lib)
+      builder = new(library_name)
+      lib = builder.library
       
       #noinspection SpellCheckingInspection
       cmd = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -]
@@ -117,18 +120,28 @@ class FFI::UCTags
       lib
     end
     
+    private :new
   end
   # Initialize class variable
   self.ffi_module = FFI
   
   # The [`Library`](https://rubydoc.info/gems/ffi/FFI/Library) module this instance is working on
+  # 
+  # @return [Module & FFI::Library]
   attr_reader :library
   
-  ## Indefinite API follows ##
-  
-  def initialize(lib)
-    @library = lib
+  # Create an instance for working on the named shared library.
+  # The attribute {#library} is set to a new [`Library`](https://rubydoc.info/gems/ffi/FFI/Library)
+  # module with the named shared library [loaded](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method).
+  # 
+  # @param library_name [_ToS]
+  def initialize(library_name)
+    @library = Module.new
+    @library.extend(self.class.ffi_const :Library)
+    @library.ffi_lib(library_name)
   end
+  
+  ## Indefinite API follows ##
   
   #noinspection RubyResolve
   def typeref(fields)

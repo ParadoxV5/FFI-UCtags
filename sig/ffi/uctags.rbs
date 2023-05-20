@@ -7,10 +7,10 @@ class FFI::UCTags
   attr_accessor self.ffi_module: Module
   
   def self.ffi_const: (Object::name name) -> bot
-  def self.call: (_ToS lib_path, _ToS header_path, ?namespace: Module) -> ffi_library
+  def self.call: (_ToS library_name, _ToS header_path, ?namespace: Module) -> ffi_library
   
   attr_accessor library: ffi_library
-  def initialize: (ffi_library lib) -> void
+  def initialize: (_ToS library_name) -> void
   
   @prefix: Array[untyped]
   def prefix: (*top prefixes) -> void
