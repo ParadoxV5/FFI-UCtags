@@ -4,11 +4,8 @@ class FFI::UCTags
   VERSION: String
   COMMAND: Array[String]
   
-  attr_accessor self.namespace: Module
-  def self.ns_const: (Object::name name) -> bot
+  attr_accessor self.ffi_module: Module
   
-  def initialize: (?Module namespace) -> void
-  
-  def call: (_ToS lib_path, _ToS header_path) -> library
+  def self.ffi_const: (Object::name name) -> bot
   def self.call: (_ToS lib_path, _ToS header_path, ?namespace: Module) -> library
 end

@@ -23,27 +23,27 @@ require_relative 'uctags/builder'
 # * {.call} for an excellent starting point of your exploration
 class FFI::UCTags
   class << self
-    # The module for {.call} to {.ns_const source} modules and classes *(but not constants)* from; the default is {FFI}.
+    # The module for {.call} to {.ffi_const source} modules and classes *(but not constants)* from; the default is {FFI}.
     # 
     # Configure this attribute to have UCTags use an alternate FFI implementation of preference, such as
     # [FFI-Plus](https://github.com/ParadoxV5/FFI-Plus) or [Nice-FFI](https://github.com/sparkchaser/nice-ffi).
     # 
-    # The customized namespace does not have to cover all utilized FFI modules/classes –
-    # {.call} will fall back to source from FFI for modules/classes not found from the namespace.
-    # However, those that the namespace do provide must match in layouts and functionalities as those of {FFI}.
+    # The customized module does not have to cover all utilized FFI modules/classes –
+    # {.call} will fall back to source from FFI for modules/classes not found from this module (see {.ffi_const}).
+    # However, those that the ffi_module do provide must match in layouts and functionalities as those of {FFI}.
     # 
     # @return [Module]
-    attr_reader :namespace
-    def namespace=(namespace)
-      unless namespace.is_a? Module
-        raise "wrong argument type #{namespace.class} (expected Module)"
+    attr_reader :ffi_module
+    def ffi_module=(ffi_module)
+      unless ffi_module.is_a? Module
+        raise "wrong argument type #{ffi_module.class} (expected Module)"
       end
-      @namespace = namespace
+      @ffi_module = ffi_module
     end
     
-    # Look up the named constant from {.namespace} or its ancestors, or from {FFI} if not found in the namespace.
-    def ns_const(name)
-      namespace.const_get(name, true)
+    # Look up the named constant from {.ffi_module} or its ancestors, or from {FFI} if not found in that module.
+    def ffi_const(name)
+      ffi_module.const_get(name, true)
     rescue NameError
       FFI.const_get(name, true)
     end
@@ -62,10 +62,10 @@ class FFI::UCTags
     #   the new `Library` module with every supported construct imported
     #   (See [the README section](..#constructs--ctags-kinds-support) for a list of supported constructs)
     # 
-    # @see .namespace
+    # @see .ffi_module
     def call(library_name, header_path)
       lib = Module.new
-      lib.extend(ns_const :Library)
+      lib.extend(ffi_const :Library)
       lib.ffi_lib library_name
       builder = Builder.new(lib)
       
@@ -96,9 +96,9 @@ class FFI::UCTags
             builder << name.to_sym
             builder << builder.typeref(fields)
           when 's' # structure names
-            builder.open lib.const_set(name, Class.new(ns_const :Struct)), :layout
+            builder.open lib.const_set(name, Class.new(ffi_const :Struct)), :layout
           when 'u' # union names
-            builder.open lib.const_set(name, Class.new(ns_const :Union)), :layout
+            builder.open lib.const_set(name, Class.new(ffi_const :Union)), :layout
           
           # Miscellaneous
           when 't' # typedefs
@@ -119,5 +119,5 @@ class FFI::UCTags
     
   end
   # Initialize class variable
-  self.namespace = FFI
+  self.ffi_module = FFI
 end
