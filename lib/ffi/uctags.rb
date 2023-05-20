@@ -18,12 +18,13 @@ require 'ffi'
 require_relative 'uctags/version'
 require_relative 'uctags/builder'
 
-# Auto-load FFI functions and etc. by parsing a C header file. See:
-# * [the README](..) for an overview of the gem
-# * {.call} for an excellent starting point of your exploration
+# Auto-load FFI functions and etc. by parsing a C header file. See [the README](..) for an overview of the gem.
+# 
+# Most use cases are only concerned with the main method {.call} and perhaps {.ffi_module} customization.
+# Other class and instance methods (most of them private) are for advanced uses such as extending the gem.
 class FFI::UCTags
   class << self
-    # The module for {.call} to {.ffi_const source} modules and classes *(but not constants)* from; the default is {FFI}.
+    # The module for {.call} to source modules and classes *(but not constants)* from; the default is {FFI}.
     # 
     # Configure this attribute to have UCTags use an alternate FFI implementation of preference, such as
     # [FFI-Plus](https://github.com/ParadoxV5/FFI-Plus) or [Nice-FFI](https://github.com/sparkchaser/nice-ffi).
