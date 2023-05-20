@@ -4,6 +4,8 @@ class FFI::UCTags
   VERSION: String
   COMMAND: Array[String]
   
+  attr_accessor self.namespace: Module
+  
   @ns: Module
   def initialize: (?Module namespace) -> void
   

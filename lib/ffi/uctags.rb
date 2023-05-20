@@ -22,25 +22,30 @@ require_relative 'uctags/builder'
 # * [the README](..) for an overview of the gem
 # * {.call} for an excellent starting point of your exploration
 class FFI::UCTags
-  # Create an instance for the provided namespace,
-  # which will be where {#call} will source modules and classes *(but not constants)* from.
-  # This enables utilization with alternate FFI implementations such as
-  # [FFI-Plus](https://github.com/ParadoxV5/FFI-Plus) and [Nice-FFI](https://github.com/sparkchaser/nice-ffi),
-  # assuming they have the same module/class layout and functionalities as FFI.
-  # 
-  # The namespace does not have to cover all {FFI} modules/classes, e.g., by `include`ing {FFI}.
-  # {#call} will fall back to source from {FFI} for modules/classes not found from the namespace.
-  # 
-  # Instantiating before {#call}ing allows the same namespace to load multiple
-  # [namespace`::Library`](https://rubydoc.info/gems/ffi/FFI/Library)s.
-  # The class method {.call} is an alternative for one-time uses that hides the instantiation.
-  # 
-  # @param namespace must be a module, not a class
-  def initialize(namespace = FFI)
-    if !namespace.is_a? Module or namespace.is_a? Class
-      raise "wrong argument type #{namespace.class} (expected Module)"
+  class << self
+    # The module for {.call} to source modules and classes *(but not constants)* from; the default is {FFI}.
+    # 
+    # Configure this attribute to have UCTags use an alternate FFI implementation of preference, such as
+    # [FFI-Plus](https://github.com/ParadoxV5/FFI-Plus) or [Nice-FFI](https://github.com/sparkchaser/nice-ffi).
+    # 
+    # The customized namespace does not have to cover all utilized FFI modules/classes –
+    # {.call} will fall back to source from FFI for modules/classes not found from the namespace.
+    # However, those that the namespace do provide must match in layouts and functionalities as those of {FFI}.
+    # 
+    # @return [Module]
+    attr_reader :namespace
+    def namespace=(namespace)
+      if !namespace.is_a? Module or namespace.is_a? Class
+        raise "wrong argument type #{namespace.class} (expected Module)"
+      end
+      @namespace = (FFI >= namespace) ? namespace : Module.new.include(namespace, FFI)
     end
-    @ns = (FFI >= namespace) ? namespace : Module.new.include(namespace, FFI)
+  end
+  # Initialize class variable
+  self.namespace = FFI
+  
+  def initialize
+    @ns = self.class.namespace
   end
   
   # Create a new [namespace`::Library`](https://rubydoc.info/gems/ffi/FFI/Library) module,
