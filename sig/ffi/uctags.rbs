@@ -6,7 +6,6 @@ class FFI::UCTags
   
   attr_accessor self.namespace: Module
   
-  @ns: Module
   def initialize: (?Module namespace) -> void
   
   def call: (_ToS lib_path, _ToS header_path) -> library

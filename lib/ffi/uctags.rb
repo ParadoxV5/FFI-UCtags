@@ -40,85 +40,79 @@ class FFI::UCTags
       end
       @namespace = (FFI >= namespace) ? namespace : Module.new.include(namespace, FFI)
     end
+    
+    # Create a new [`Library`](https://rubydoc.info/gems/ffi/FFI/Library) module,
+    # [load](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method) the library given by `library_name`,
+    # and utilize `ctags` to parse the C header located at `header_path`.
+    # 
+    # ```ruby
+    # require 'ffi/uctags'
+    # MyLib = FFI::UCTags.('mylib', 'path/to/mylib.h')
+    # puts MyLib.my_function(…)
+    # ```
+    # 
+    # 
+    # @return [Module]
+    #   the new `Library` module with every supported construct imported
+    #   (See [the README section](..#constructs--ctags-kinds-support) for a list of supported constructs)
+    # 
+    # @see .namespace
+    def call(library_name, header_path)
+      lib = Module.new
+      #noinspection RubyResolve
+      lib.extend(@namespace::Library)
+      lib.ffi_lib library_name
+      builder = Builder.new(lib)
+      
+      #noinspection SpellCheckingInspection
+      cmd = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -]
+      cmd << '-V' if $DEBUG
+      cmd << header_path
+      # Run and pipe-read. `err: :err` connects command stderr to Ruby stderr
+      IO.popen(cmd, err: :err) do|cmd_out|
+        cmd_out.each_line(chomp: true) do|line|
+          # Note for maintainers: Like Ruby, C doesn’t allow use before declaration (except for functions pre-C11),
+          # so we don’t need to worry about types used before they’re loaded as that’d be the library’s fault.
+          name, file, line, k, *fields = line.split("\t")
+          puts "processing `#{name}` of kind `#{k}` (#{file}@#{line[...-2]})" if $VERBOSE
+          fields = fields.to_h { _1.split(':', 2) }
+          case k
+          
+          # Functions
+          when 'z' # function parameters inside function or prototype definitions
+            builder << builder.typeref(fields)
+          when 'p' # function prototypes
+            builder.open :attach_function
+            builder.prefix name
+            builder.suffix builder.typeref(fields)
+          
+          # Structs/Unions
+          when 'm' # struct, and union members
+            builder << name.to_sym
+            builder << builder.typeref(fields)
+          when 's' # structure names
+            builder.open lib.const_set(name, Class.new(@namespace::Struct)), :layout
+          when 'u' # union names
+            builder.open lib.const_set(name, Class.new(@namespace::Union)), :layout
+          
+          # Miscellaneous
+          when 't' # typedefs
+            builder.close
+            lib.typedef builder.typeref(fields), name.to_sym
+          when 'x' # external and forward variable declarations
+            builder.close
+            lib.attach_variable name, builder.typeref(fields)
+          
+          else
+            warn "\tunsupported kind ignored" if $VERBOSE
+          end
+        end
+      end
+      builder.close # flush the last bits
+      lib
+    end
+    
   end
   # Initialize class variable
   self.namespace = FFI
-  
-  def initialize
-    @ns = self.class.namespace
-  end
-  
-  # Create a new [namespace`::Library`](https://rubydoc.info/gems/ffi/FFI/Library) module,
-  # [load](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method) the library given by `library_name`,
-  # and {COMMAND utilize `ctags`} to parse the C header located at `header_path`.
-  # 
-  # See
-  # * [the Constructs section of the README](..#constructs--ctags-kinds-support) for a list of supported constructs
-  # * {#initialize} for the role of the namespace
-  # * The class method {.call}
-  # 
-  # @return the new `Library` module with every supported construct imported
-  def call(library_name, header_path)
-    lib = Module.new
-    lib.extend(@ns::Library)
-    lib.ffi_lib library_name
-    builder = Builder.new(lib)
-    
-    #noinspection SpellCheckingInspection
-    cmd = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -]
-    cmd << '-V' if $DEBUG
-    cmd << header_path
-    # Run and pipe-read. `err: :err` connects command stderr to Ruby stderr
-    IO.popen(cmd, err: :err) do|cmd_out|
-      cmd_out.each_line(chomp: true) do|line|
-        # Note for maintainers: Like Ruby, C doesn’t allow use before declaration (except for functions pre-C11),
-        # so we don’t need to worry about types used before they’re loaded as that’d be the library’s fault.
-        name, file, line, k, *fields = line.split("\t")
-        puts "processing `#{name}` of kind `#{k}` (#{file}@#{line[...-2]})" if $VERBOSE
-        fields = fields.to_h { _1.split(':', 2) }
-        case k
-        
-        # Functions
-        when 'z' # function parameters inside function or prototype definitions
-          builder << builder.typeref(fields)
-        when 'p' # function prototypes
-          builder.open :attach_function
-          builder.prefix name
-          builder.suffix builder.typeref(fields)
-        
-        # Structs/Unions
-        when 'm' # struct, and union members
-          builder << name.to_sym
-          builder << builder.typeref(fields)
-        when 's' # structure names
-          builder.open lib.const_set(name, Class.new(@ns::Struct)), :layout
-        when 'u' # union names
-          builder.open lib.const_set(name, Class.new(@ns::Union)), :layout
-        
-        # Miscellaneous
-        when 't' # typedefs
-          builder.close
-          lib.typedef builder.typeref(fields), name.to_sym
-        when 'x' # external and forward variable declarations
-          builder.close
-          lib.attach_variable name, builder.typeref(fields)
-        
-        else
-          warn "\tunsupported kind ignored" if $VERBOSE
-        end
-      end
-    end
-    builder.close # flush the last bits
-    lib
-  end
-  
-  # Create a temporary instance for the given `namespace` to {#call} with the remaining `args`.
-  # See {#initialize} for the role of the namespace and {#call} for the main function of this gem.
-  # 
-  # ```ruby
-  # require 'ffi/uctags'
-  # MyLib = FFI::UCTags.('mylib', 'path/to/mylib.h')
-  # puts MyLib.my_function(…)
-  # ```
-  def self.call(*args, namespace: FFI) = new(namespace).(*args)
 end
