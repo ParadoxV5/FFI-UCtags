@@ -8,4 +8,21 @@ class FFI::UCTags
   
   def self.ffi_const: (Object::name name) -> bot
   def self.call: (_ToS lib_path, _ToS header_path, ?namespace: Module) -> library
+  
+  @lib: library
+  def initialize: (library lib) -> void
+  
+  @prefix: Array[untyped]
+  def prefix: (*top prefixes) -> void
+  @suffix: Array[untyped]
+  def suffix: (*top suffixes) -> void
+  @args: Array[untyped]
+  def <<: (top arg) -> void
+  
+  @receiver: untyped?
+  @method: Object::name?
+  
+  def typeref: (Hash[String, String] fields) -> FFI::Type
+  def open: (?top receiver, Object::name? method) -> void
+  def close: -> void
 end
