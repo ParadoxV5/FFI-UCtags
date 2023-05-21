@@ -69,8 +69,8 @@ class FFI::UCtags
     # 
     # @see .ffi_module
     def call(library_name, header_path)
-      builder = new(library_name)
-      lib = builder.library
+      worker = new(library_name)
+      lib = worker.library
       
       #noinspection SpellCheckingInspection
       cmd = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -]
@@ -82,41 +82,12 @@ class FFI::UCtags
           # Note for maintainers: Like Ruby, C doesn’t allow use before declaration (except for functions pre-C11),
           # so we don’t need to worry about types used before they’re loaded as that’d be the library’s fault.
           name, file, line, k, *fields = line.split("\t")
-          puts "processing `#{name}` of kind `#{k}` (#{file}@#{line[...-2]})" if $VERBOSE
-          fields = fields.to_h { _1.split(':', 2) }
-          case k
-          
-          # Functions
-          when 'z' # function parameters inside function or prototype definitions
-            builder << builder.typeref(fields)
-          when 'p' # function prototypes
-            builder.open :attach_function
-            builder.prefix name
-            builder.suffix builder.typeref(fields)
-          
-          # Structs/Unions
-          when 'm' # struct, and union members
-            builder << name.to_sym
-            builder << builder.typeref(fields)
-          when 's' # structure names
-            builder.open lib.const_set(name, Class.new(ffi_const :Struct)), :layout
-          when 'u' # union names
-            builder.open lib.const_set(name, Class.new(ffi_const :Union)), :layout
-          
-          # Miscellaneous
-          when 't' # typedefs
-            builder.close
-            lib.typedef builder.typeref(fields), name.to_sym
-          when 'x' # external and forward variable declarations
-            builder.close
-            lib.attach_variable name, builder.typeref(fields)
-          
-          else
-            warn "\tunsupported kind ignored" if $VERBOSE
-          end
+          line.delete_suffix!(';"')
+          puts "processing `#{name}` of kind `#{k}` (#{file}@#{line})" if $VERBOSE
+          worker.process_kind(k, name, fields.to_h { _1.split(':', 2) })
         end
       end
-      builder.close # flush the last bits
+      worker.close # flush the last bits
       lib
     end
     
@@ -124,6 +95,9 @@ class FFI::UCtags
   end
   # Initialize class variable
   self.ffi_module = FFI
+  
+  # (see .ffi_const)
+  def ffi_const(...) = self.class.ffi_const(...)
   
   # The [`Library`](https://rubydoc.info/gems/ffi/FFI/Library) module this instance is working on
   # 
@@ -137,8 +111,42 @@ class FFI::UCtags
   # @param library_name [_ToS]
   def initialize(library_name)
     @library = Module.new
-    @library.extend(self.class.ffi_const :Library)
+    @library.extend(ffi_const :Library)
     @library.ffi_lib(library_name)
+  end
+  
+  # Process the u-ctags kind
+  # 
+  # @param k [String] One-letter kind ID
+  # @param name [String]
+  # @param fields [Hash[String, String]]
+  def process_kind(k, name, fields)
+    case k
+    # Functions
+    when 'z' # function parameters inside function or prototype definitions
+      self << typeref(fields)
+    when 'p' # function prototypes
+      open :attach_function
+      prefix name
+      suffix typeref(fields)
+    # Structs/Unions
+    when 'm' # struct, and union members
+      self << name.to_sym
+      self << typeref(fields)
+    when 's' # structure names
+      open @library.const_set(name, Class.new(ffi_const :Struct)), :layout
+    when 'u' # union names
+      open @library.const_set(name, Class.new(ffi_const :Union)), :layout
+    # Miscellaneous
+    when 't' # typedefs
+      close
+      @library.typedef typeref(fields), name.to_sym
+    when 'x' # external and forward variable declarations
+      close
+      @library.attach_variable name, typeref(fields)
+    else
+      warn "\tunsupported kind ignored" if $VERBOSE
+    end
   end
   
   ## Indefinite API follows ##
