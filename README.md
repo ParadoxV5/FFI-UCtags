@@ -32,7 +32,7 @@ instead relies on code review and small test subjects.
   * `m` struct, and union members
   * `s` structure names
   * `u` union names
-  * currently crashes on anonymous structs/unions or ones with non-capitalized names
+  * currently does not recognize pointer to struct/union typedefs
 
 ### 🔜 To Do
 * Enums
@@ -40,7 +40,7 @@ instead relies on code review and small test subjects.
   * `g` enumeration names
 * Literal Macros (macro-defined constants)
   * `d` macro definitions
-* FFI callbacks (wraps pointer to functions) and auto-cast for struct/union pointers
+* FFI callbacks (wraps pointer to functions)
 
 ### ⏳ No Plans Yet
 * Enums that aren’t simply `0...size`
@@ -58,6 +58,7 @@ instead relies on code review and small test subjects.
 ### 🧊 Nope
 * Non-literal Macros (i.e., C code macros)
 * Miscellaneous Ctags Kinds
+  * `l` local variables
   * `L` goto labels
 
 

@@ -1,5 +1,6 @@
 class FFI::UCtags
   type ffi_library = Module & FFI::Library
+  type fields = Hash[String, String]
   
   VERSION: String
   COMMAND: Array[String]
@@ -9,12 +10,22 @@ class FFI::UCtags
   def self.ffi_const: (Object::name name) -> bot
   def ffi_const: (Object::name name) -> bot
   
-  def self.call: (_ToS library_name, _ToS header_path, ?namespace: Module) -> ffi_library
+  def self.call: (_ToS library_name, _ToS header_path) -> ffi_library
   
-  attr_accessor library: ffi_library
+  attr_reader library: ffi_library
+  @composite_types: Hash[Symbol, Symbol | Class]
+  @composite_typedefs: Hash[Symbol, Class]
   def initialize: (_ToS library_name) -> void
-
-  def process_kind: (String k, String name, Hash[String, String] fields) -> void
+  
+  def extract_type: (fields fields) -> [String, bool?]
+  def find_type: (String name) -> FFI::Type
+  def composite_type: (String name) -> Class
+  def extract_and_process_type: (fields fields) -> FFI::Type
+  
+  def process_kind: (String k, String name, fields fields) -> void
+  def struct: (Symbol superclass, String name) -> Class
+  def typedef: (String name, fields fields) -> void
+  
   
   @prefix: Array[untyped]
   def prefix: (*top prefixes) -> void
@@ -26,7 +37,7 @@ class FFI::UCtags
   @receiver: untyped?
   @method: Object::name?
   
-  def typeref: (Hash[String, String] fields) -> FFI::Type
   def open: (?top receiver, Object::name? method) -> void
   def close: -> void
+  def finish: -> void
 end

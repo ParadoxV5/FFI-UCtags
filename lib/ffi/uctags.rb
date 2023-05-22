@@ -20,10 +20,10 @@ require_relative 'uctags/version'
 # Auto-load FFI functions and etc. by parsing a C header file. See [the README](..) for an overview of the gem.
 # 
 # Most use cases are only concerned with the main method {.call} and perhaps {.ffi_module} customization.
-# Other class and instance methods (most of them private) are for advanced uses such as extending the gem.
+# Other class and instance methods (including {#initialize}) are for advanced uses such as extending the gem.
 class FFI::UCtags
   class << self
-    # The module for {.call} to source modules and classes *(but not constants)* from; the default is {FFI}.
+    # The module for {.call} to source constants (namely modules and classes) from; the default is {FFI}.
     # 
     # Configure this attribute to use an alternate FFI implementation of preference, such as
     # [FFI-Plus](https://github.com/ParadoxV5/FFI-Plus) or [Nice-FFI](https://github.com/sparkchaser/nice-ffi).
@@ -87,7 +87,7 @@ class FFI::UCtags
           worker.process_kind(k, name, fields.to_h { _1.split(':', 2) })
         end
       end
-      worker.close # flush the last bits
+      worker.finish # flush the last bits
       lib
     end
     
@@ -113,34 +113,129 @@ class FFI::UCtags
     @library = Module.new
     @library.extend(ffi_const :Library)
     @library.ffi_lib(library_name)
+    # Maps struct/union (and enum in future versions) names to either
+    # the class [Class] or its `@composite_typedefs` key [Symbol]
+    @composite_types = {}
+    # Records typedef-struct/unions (and typedef-enums in future versions)
+    @composite_typedefs = {}
   end
   
-  # Process the u-ctags kind
+  # Extract the type name from the give u-ctags fields.
   # 
-  # @param k [String] One-letter kind ID
+  # Identify and processes pointers to and arrays of structs or unions (or enums in future versions).
+  # Do not process the extracted name to a usable `FFI::Type`;
+  # follow up with {#find_type} or {#composite_type}, or use {#extract_and_process_type} instead.
+  # 
+  # @param fields [Hash[String, String]] additional fields from {#process_kind}
+  # @return [[String, bool?]]
+  #   * the name of the extracted type,
+  #   * `true` if it’s a struct or union (or enum in future versions), `false` if it’s a pointer to one of those, or `nil` if neither.
+  def extract_type(fields)
+    type, name = fields.fetch('typeref').split(':', 2)
+    if 'typename'.eql?(type) # basic type
+      [name, nil]
+    elsif name.end_with?('[]') # array
+      ['void *', nil] # FFI does not support typed array auto-casting
+    else
+      [name, name.delete_suffix!(' *').nil?] # […, whether pointer suffix not deleted]
+    end
+  end
+  # Find the named type from {#library}.
+  # 
+  # Find typedefs. Do not find structs, unions and enums (future versions); use {#composite_type} for those.
+  # Fall back to `TYPE_POINTER` for unrecognized unique names.
+  # 
   # @param name [String]
-  # @param fields [Hash[String, String]]
+  # @return [FFI::Type]
+  # @raise [TypeError] if the basic type is not recognized
+  # @see #extract_and_process_type
+  def find_type(name)
+    @composite_typedefs.fetch(name.to_sym) do|name_sym|
+      fallback = false
+      name_sym = case name
+        when /[*\[]/ # `t *`, `t []`, `t (*) []`, `t (*)(…)`, etc.
+          :pointer
+        when '_Bool'
+          :bool
+        when 'long double'
+          :long_double
+        else
+          # Check multi-keyword integer types (does not match unconventional styles such as `int long untyped long`)
+          # duplicate `int_type` capture name is intentional
+          if /\A((?<unsigned>un)?signed )?((?<int_type>long|short|long long)( int)?|(?<int_type>int|char))\z/ =~ name
+            #noinspection RubyResolve
+            int_type.tr!(' ', '_') # namely `long long` -> 'long_long'
+            #noinspection RubyResolve
+            unsigned ? :"u#{int_type}" : int_type.to_sym
+          else
+            # use type map and fallback
+            fallback = true
+            name_sym
+          end
+        end
+      begin
+        @library.find_type(name_sym)
+      rescue TypeError => e
+        raise e unless fallback
+        # Assume the unknown type is a pointer alias defined in another file.
+        # This should just propagate an exception once multi-file parsing is supported.
+        warn "unrecognized type `#{name}`, falling back to `TYPE_POINTER`"
+        ffi_const :TYPE_POINTER
+      end
+    end
+  end
+  # Find the named struct or union (or enum in future versions) from `@composite_types`.
+  # 
+  # @param name [String]
+  # @return [Class]
+  # @raise [KeyError] if this name is not registered
+  # @see #extract_and_process_type
+  def composite_type(name)
+    type = @composite_types.fetch(name.to_sym)
+    #noinspection RubyMismatchedReturnType
+    type.is_a?(Symbol) ? @composite_typedefs.fetch(type) : type
+  end
+  # {#extract_type Extract} and process ({#find_type} or {#composite_type}) the type from the give u-ctags fields.
+  # 
+  # @param (see #extract_type)
+  # @return [FFI::Type]
+  # @raise [TypeError] if it’s a basic type with an unrecognized name
+  # @raise [KeyError] if it’s a struct or union (or enum in future versions) with an unregistered name
+  def extract_and_process_type(...)
+    name, is_pointer = extract_type(...)
+    if is_pointer.nil? # basic type
+      find_type(name)
+    else
+      type = composite_type(name)
+      is_pointer ? type.by_ref : type.by_value
+    end
+  end
+  
+  # Process the u-ctags kind.
+  # 
+  # @param k [String] one-letter kind ID
+  # @param name [String]
+  # @param fields [Hash[String, String]] additional fields
   def process_kind(k, name, fields)
     case k
     # Functions
     when 'z' # function parameters inside function or prototype definitions
-      self << typeref(fields)
+      self << extract_and_process_type(fields)
     when 'p' # function prototypes
       open :attach_function
       prefix name
-      suffix typeref(fields)
+      suffix extract_and_process_type(fields)
     # Structs/Unions
     when 'm' # struct, and union members
       self << name.to_sym
-      self << typeref(fields)
+      self << extract_and_process_type(fields)
     when 's' # structure names
-      open @library.const_set(name, Class.new(ffi_const :Struct)), :layout
+      struct :Struct, name
     when 'u' # union names
-      open @library.const_set(name, Class.new(ffi_const :Union)), :layout
+      struct :Union, name
     # Miscellaneous
     when 't' # typedefs
-      close
-      @library.typedef typeref(fields), name.to_sym
+      typedef(name, fields)
     when 'x' # external and forward variable declarations
       close
       @library.attach_variable name, typeref(fields)
@@ -149,40 +244,35 @@ class FFI::UCtags
     end
   end
   
-  ## Indefinite API follows ##
-  
-  #noinspection RubyResolve
-  def typeref(fields)
-    type, name = fields.fetch('typeref').split(':', 2)
-    if 'typename'.eql? type # non-derived type
-      case name
-      when /[*\[]/ # `t *`, `t []`, `t (*) []`, `t (*)(…)`, etc.
-        FFI::TYPE_POINTER
-      when '_Bool'
-        FFI::TYPE_BOOL
-      when 'long double'
-        FFI::TYPE_LONGDOUBLE
-      else
-        # Check multi-keyword integer types (does not match unconventional styles such as `int long untyped long`)
-        # duplicate `t` capture name is intentional
-        if /\A((?<unsigned>un)?signed )?((?<int_type>long|short|long long)( int)?|(?<int_type>int|char))\z/ =~ name
-          int_type.tr!(' ', '_') # namely `long long` -> 'long_long'
-          unsigned ? :"u#{int_type}" : int_type.to_sym
-        else
-          name.to_sym # Fall back to type map
-        end.then do|name_sym|
-          @library.find_type(name_sym)
-        rescue TypeError
-          # Assume the unknown type is a pointer alias defined in another file.
-          # This should just propagate an exception once multi-file parsing is supported.
-          warn "unrecognized type #{name}, falling back to `:pointer`"
-          FFI::TYPE_POINTER
-        end
-      end
-    else # `struct` or `union` (`enum` not yet supported)
-      @library.const_get(name).by_value
+  # Build and record a new struct or union class
+  # 
+  # @param superclass [Symbol] symbol of the superclass constant (i.e., `:Struct` or `:Union`)
+  # @param name [String]
+  # @return [Class]
+  def struct(superclass, name)
+    type = Class.new(ffi_const superclass)
+    open type, :layout
+    @composite_types[name.to_sym] = type
+  end
+  # Register a typedef. Register in {#library} directly for basic types;
+  # store in `@composite_typedefs` (and update `@composite_types`) for structs and unions (and enums in future versions).
+  # 
+  # @param name [String] new name
+  # @param fields [Hash[String, String]] additional fields from {#process_kind}
+  def typedef(name, fields)
+    close
+    name = name.to_sym
+    type_name, is_pointer = extract_type(fields)
+    if is_pointer.nil? # basic type
+      @library.typedef find_type(type_name), name
+    else # structural type
+      type_name = type_name.to_sym
+      @composite_typedefs[name] = @composite_types.fetch(type_name)
+      @composite_types[type_name] = name
     end
   end
+  
+  ## Indefinite API follows ##
   
   def prefix(*prefixes) = @prefix = prefixes
   def suffix(*suffixes) = @suffix = suffixes
@@ -200,4 +290,35 @@ class FFI::UCtags
     @prefix, @suffix, @args = [], [], []
   end
   def close = open nil, nil
+  
+  def finish
+    close
+    @composite_types.each do |name, type|
+      # Prefer typedef name
+      if type.is_a?(Symbol)
+        name = type
+        type = @composite_typedefs.fetch(type)
+      end
+      begin
+        #noinspection RubyMismatchedArgumentType
+        @library.const_set(name, type)
+      rescue NameError
+        # Capitalize first letter, prefix if cannot
+        name = name.to_s
+        first_char = name[0]
+        #noinspection RubyNilAnalysis
+        @library.const_set(
+          if first_char.capitalize! # capitalized
+            name[0] = first_char
+            name
+          elsif type < self.class.ffi_const(:Union)
+            "U_#{name}"
+          else # struct
+            "S_#{name}"
+          end,
+          type
+        )
+      end
+    end
+  end
 end
