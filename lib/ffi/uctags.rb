@@ -17,6 +17,7 @@ end
 require 'ffi'
 require_relative 'uctags/version'
 
+
 # Auto-load FFI functions and etc. by parsing a C header file. See [the README](..) for an overview of the gem.
 # 
 # Most use cases are only concerned with the main method {.call} and perhaps {.ffi_module} customization.
@@ -51,6 +52,7 @@ class FFI::UCtags
       FFI.const_get(name, true)
     end
     
+    
     # Create a new [`Library`](https://rubydoc.info/gems/ffi/FFI/Library) module,
     # [load](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method) the named shared library,
     # and utilize `ctags` to parse the C header located at `header_path`.
@@ -66,12 +68,9 @@ class FFI::UCtags
     # @return [Module & FFI::Library]
     #   the new `Library` module with every supported construct imported
     #   (See [the README section](..#constructs--ctags-kinds-support) for a list of supported constructs)
-    # 
     # @see .ffi_module
     def call(library_name, header_path)
       worker = new(library_name)
-      lib = worker.library
-      
       #noinspection SpellCheckingInspection
       cmd = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -]
       cmd << '-V' if $DEBUG
@@ -79,7 +78,8 @@ class FFI::UCtags
       # Run and pipe-read. `err: :err` connects command stderr to Ruby stderr
       IO.popen(cmd, err: :err) do|cmd_out|
         cmd_out.each_line(chomp: true) do|line|
-          # Note for maintainers: Like Ruby, C doesn’t allow use before declaration (except for functions pre-C11),
+          # Note for maintainers:
+          # For compilers’ convenience, C doesn’t allow use before declaration (except for functions pre-C11),
           # so we don’t need to worry about types used before they’re loaded as that’d be the library’s fault.
           name, file, line, k, *fields = line.split("\t")
           line.delete_suffix!(';"')
@@ -87,9 +87,9 @@ class FFI::UCtags
           worker.process_kind(k, name, fields.to_h { _1.split(':', 2) })
         end
       end
-      worker.finish # flush the last bits
-      lib
+      worker.finish
     end
+    
     
     private :new
   end
@@ -99,10 +99,21 @@ class FFI::UCtags
   # (see .ffi_const)
   def ffi_const(...) = self.class.ffi_const(...)
   
+  
   # The [`Library`](https://rubydoc.info/gems/ffi/FFI/Library) module this instance is working on
   # 
   # @return [Module & FFI::Library]
   attr_reader :library
+  
+  # Maps struct/union (and enum in future versions) names to either
+  # the class [Class] or its {#composite_typedefs} key [Symbol]
+  # 
+  # @return [Hash[Symbol, Symbol | Class]]
+  attr_reader :composite_types
+  # Records typedef-struct/unions (and typedef-enums in future versions)
+  # 
+  # @return [Hash[Symbol, Class]]
+  attr_reader :composite_typedefs
   
   # Create an instance for working on the named shared library.
   # The attribute {#library} is set to a new [`Library`](https://rubydoc.info/gems/ffi/FFI/Library)
@@ -113,12 +124,11 @@ class FFI::UCtags
     @library = Module.new
     @library.extend(ffi_const :Library)
     @library.ffi_lib(library_name)
-    # Maps struct/union (and enum in future versions) names to either
-    # the class [Class] or its `@composite_typedefs` key [Symbol]
+    
     @composite_types = {}
-    # Records typedef-struct/unions (and typedef-enums in future versions)
     @composite_typedefs = {}
   end
+  
   
   # Extract the type name from the give u-ctags fields.
   # 
@@ -140,6 +150,7 @@ class FFI::UCtags
       [name, name.delete_suffix!(' *').nil?] # […, whether pointer suffix not deleted]
     end
   end
+  
   # Find the named type from {#library}.
   # 
   # Find typedefs. Do not find structs, unions and enums (future versions); use {#composite_type} for those.
@@ -150,7 +161,7 @@ class FFI::UCtags
   # @raise [TypeError] if the basic type is not recognized
   # @see #extract_and_process_type
   def find_type(name)
-    @composite_typedefs.fetch(name.to_sym) do|name_sym|
+    composite_typedefs.fetch(name.to_sym) do|name_sym|
       fallback = false
       name_sym = case name
         when /[*\[]/ # `t *`, `t []`, `t (*) []`, `t (*)(…)`, etc.
@@ -160,6 +171,7 @@ class FFI::UCtags
         when 'long double'
           :long_double
         else
+          
           # Check multi-keyword integer types (does not match unconventional styles such as `int long untyped long`)
           # duplicate `int_type` capture name is intentional
           if /\A((?<unsigned>un)?signed )?((?<int_type>long|short|long long)( int)?|(?<int_type>int|char))\z/ =~ name
@@ -173,6 +185,7 @@ class FFI::UCtags
             name_sym
           end
         end
+      
       begin
         @library.find_type(name_sym)
       rescue TypeError => e
@@ -184,17 +197,19 @@ class FFI::UCtags
       end
     end
   end
-  # Find the named struct or union (or enum in future versions) from `@composite_types`.
+  
+  # Find the named struct or union (or enum in future versions) from {#composite_types}.
   # 
   # @param name [String]
   # @return [Class]
   # @raise [KeyError] if this name is not registered
   # @see #extract_and_process_type
   def composite_type(name)
-    type = @composite_types.fetch(name.to_sym)
+    type = composite_types.fetch(name.to_sym)
     #noinspection RubyMismatchedReturnType
-    type.is_a?(Symbol) ? @composite_typedefs.fetch(type) : type
+    type.is_a?(Symbol) ? composite_typedefs.fetch(type) : type
   end
+  
   # {#extract_type Extract} and process ({#find_type} or {#composite_type}) the type from the give u-ctags fields.
   # 
   # @param (see #extract_type)
@@ -210,6 +225,7 @@ class FFI::UCtags
       is_pointer ? type.by_ref : type.by_value
     end
   end
+  
   
   # Process the u-ctags kind.
   # 
@@ -238,11 +254,12 @@ class FFI::UCtags
       typedef(name, fields)
     when 'x' # external and forward variable declarations
       close
-      @library.attach_variable name, typeref(fields)
+      @library.attach_variable name, extract_and_process_type(fields)
     else
       warn "\tunsupported kind ignored" if $VERBOSE
     end
   end
+  
   
   # Build and record a new struct or union class
   # 
@@ -252,10 +269,10 @@ class FFI::UCtags
   def struct(superclass, name)
     type = Class.new(ffi_const superclass)
     open type, :layout
-    @composite_types[name.to_sym] = type
+    composite_types[name.to_sym] = type
   end
   # Register a typedef. Register in {#library} directly for basic types;
-  # store in `@composite_typedefs` (and update `@composite_types`) for structs and unions (and enums in future versions).
+  # store in `composite_typedefs` (and update `composite_types`) for structs and unions (and enums in future versions).
   # 
   # @param name [String] new name
   # @param fields [Hash[String, String]] additional fields from {#process_kind}
@@ -267,16 +284,20 @@ class FFI::UCtags
       @library.typedef find_type(type_name), name
     else # structural type
       type_name = type_name.to_sym
-      @composite_typedefs[name] = @composite_types.fetch(type_name)
-      @composite_types[type_name] = name
+      composite_typedefs[name] = composite_types.fetch(type_name)
+      composite_types[type_name] = name
     end
   end
   
+  
   ## Indefinite API follows ##
+  
+  private
   
   def prefix(*prefixes) = @prefix = prefixes
   def suffix(*suffixes) = @suffix = suffixes
   def <<(arg) = @args << arg
+  
   
   def open(receiver = @library, method)
     if @method
@@ -289,15 +310,16 @@ class FFI::UCtags
     @receiver, @method = receiver, method
     @prefix, @suffix, @args = [], [], []
   end
+  
   def close = open nil, nil
   
-  def finish
-    close
-    @composite_types.each do |name, type|
+  public def finish
+    close # flush the last bits
+    composite_types.each do |name, type|
       # Prefer typedef name
       if type.is_a?(Symbol)
         name = type
-        type = @composite_typedefs.fetch(type)
+        type = composite_typedefs.fetch(type)
       end
       begin
         #noinspection RubyMismatchedArgumentType
@@ -320,5 +342,6 @@ class FFI::UCtags
         )
       end
     end
+    library
   end
 end

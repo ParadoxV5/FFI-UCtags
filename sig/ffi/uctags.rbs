@@ -13,8 +13,8 @@ class FFI::UCtags
   def self.call: (_ToS library_name, _ToS header_path) -> ffi_library
   
   attr_reader library: ffi_library
-  @composite_types: Hash[Symbol, Symbol | Class]
-  @composite_typedefs: Hash[Symbol, Class]
+  attr_reader composite_types: Hash[Symbol, Symbol | Class]
+  attr_reader composite_typedefs: Hash[Symbol, Class]
   def initialize: (_ToS library_name) -> void
   
   def extract_type: (fields fields) -> [String, bool?]
@@ -39,5 +39,5 @@ class FFI::UCtags
   
   def open: (?top receiver, Object::name? method) -> void
   def close: -> void
-  def finish: -> void
+  def finish: -> ffi_library
 end
