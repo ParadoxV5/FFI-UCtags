@@ -2,8 +2,8 @@ class FFI::UCtags
   type ffi_library = Module & FFI::Library
   type fields = Hash[String, String]
   
+  
   VERSION: String
-  COMMAND: Array[String]
   
   attr_accessor self.ffi_module: Module
   
@@ -12,10 +12,15 @@ class FFI::UCtags
   
   def self.call: (_ToS library_name, _ToS header_path) -> ffi_library
   
+  
   attr_reader library: ffi_library
   attr_reader composite_types: Hash[Symbol, Symbol | Class]
   attr_reader composite_typedefs: Hash[Symbol, Class]
+  attr_accessor construct_builder: (^(*untyped) -> void)?
+  attr_reader construct_members: Array[untyped]
   def initialize: (_ToS library_name) -> void
+  
+  def new_construct: () ?{ (*untyped) -> void } -> void
   
   def extract_type: (fields fields) -> [String, bool?]
   def find_type: (String name) -> FFI::Type
@@ -26,18 +31,5 @@ class FFI::UCtags
   def struct: (Symbol superclass, String name) -> Class
   def typedef: (String name, fields fields) -> void
   
-  
-  @prefix: Array[untyped]
-  def prefix: (*top prefixes) -> void
-  @suffix: Array[untyped]
-  def suffix: (*top suffixes) -> void
-  @args: Array[untyped]
-  def <<: (top arg) -> void
-  
-  @receiver: untyped?
-  @method: Object::name?
-  
-  def open: (?top receiver, Object::name? method) -> void
-  def close: -> void
   def finish: -> ffi_library
 end

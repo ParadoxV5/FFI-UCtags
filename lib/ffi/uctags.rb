@@ -57,11 +57,10 @@ class FFI::UCtags
     # [load](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method) the named shared library,
     # and utilize `ctags` to parse the C header located at `header_path`.
     # 
-    # ```ruby
-    # require 'ffi/uctags'
-    # MyLib = FFI::UCtags.('mylib', 'path/to/mylib.h')
-    # puts MyLib.my_function(…)
-    # ```
+    # @example
+    #   require 'ffi/uctags'
+    #   MyLib = FFI::UCtags.('mylib', 'path/to/mylib.h')
+    #   puts MyLib.my_function(…)
     # 
     # @param library_name [_ToS]
     # @param header_path [_ToS]
@@ -115,6 +114,16 @@ class FFI::UCtags
   # @return [Hash[Symbol, Class]]
   attr_reader :composite_typedefs
   
+  # The proc to build a composite construct from its members,
+  # or `nil` if the current construct doesn’t need queued building – see {#new_construct}
+  # 
+  # @return [(^(*untyped) -> void)?]
+  attr_accessor :construct_builder
+  # A queue for composite constructs’ members – see {#new_construct}
+  # 
+  # @return [Array[untyped]]
+  attr_reader :construct_members
+  
   # Create an instance for working on the named shared library.
   # The attribute {#library} is set to a new [`Library`](https://rubydoc.info/gems/ffi/FFI/Library)
   # module with the named shared library [loaded](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method).
@@ -127,6 +136,27 @@ class FFI::UCtags
     
     @composite_types = {}
     @composite_typedefs = {}
+    @construct_members = []
+  end
+  
+  
+  # Prepare building a new construct.
+  # 
+  # If there’s a {#construct_builder} currently, invoke it with {#construct_members} splatted as args.
+  # Therefore, every construct must call this method to ensure the previous construct flushes through.
+  # Then, `Array#clear` the `construct_members` and store the given block (or `nil`) as the next `construct_builder`.
+  # 
+  # {.call} processes a composite construct (e.g., a function or struct) as a sequence of consecutive components,
+  # which starts with the construct itself followed by its original-ordered list of members
+  # (e.g., function params, struct members), all as separate full-sized entries. Therefore, {#construct_members a list}
+  # must queue the members {#construct_builder to compile later} until the next sequence commences,
+  # especially that these sequences do not have terminator parts nor a member count in the header entry.
+  # 
+  # Simpler constructs with only one u-ctags entry can simply call this method with no block (“`nil` block `&nil`”).
+  def new_construct(&seq_proc2)
+    construct_builder&.(*construct_members)
+    construct_members.clear
+    self.construct_builder = seq_proc2
   end
   
   
@@ -226,7 +256,7 @@ class FFI::UCtags
     end
   end
   
-  
+  # todo use and mention sequence and other tools * highlight ex and proc type
   # Process the u-ctags kind.
   # 
   # @param k [String] one-letter kind ID
@@ -293,25 +323,6 @@ class FFI::UCtags
   ## Indefinite API follows ##
   
   private
-  
-  def prefix(*prefixes) = @prefix = prefixes
-  def suffix(*suffixes) = @suffix = suffixes
-  def <<(arg) = @args << arg
-  
-  
-  def open(receiver = @library, method)
-    if @method
-      if @prefix.empty? and @suffix.empty?
-        @receiver.public_send(@method, *@args)
-      else
-        @receiver.public_send(@method, *@prefix, @args, *@suffix)
-      end
-    end
-    @receiver, @method = receiver, method
-    @prefix, @suffix, @args = [], [], []
-  end
-  
-  def close = open nil, nil
   
   public def finish
     close # flush the last bits
