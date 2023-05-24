@@ -95,7 +95,7 @@ class FFI::UCtags
           worker.process(k, name, fields.to_h { _1.split(':', 2) })
         end
       end
-      worker.finish
+      worker.close
     end
     
     
@@ -205,30 +205,31 @@ class FFI::UCtags
   # @raise [TypeError] if the basic type is not recognized
   # @see #extract_and_process_type
   def find_type(name)
+    # Find from {#composite_typedefs} first, process if not found
     composite_typedefs.fetch(name.to_sym) do|name_sym|
       fallback = false
       name_sym = case name
-        when /[*\[]/ # `t *`, `t []`, `t (*) []`, `t (*)(…)`, etc.
-          :pointer
-        when '_Bool'
-          :bool
-        when 'long double'
-          :long_double
+      when /[*\[]/ # `t *`, `t []`, `t (*) []`, `t (*)(…)`, etc.
+        :pointer
+      when '_Bool'
+        :bool
+      when 'long double'
+        :long_double
+      else
+        
+        # Check multi-keyword integer types (does not match unconventional styles such as `int long untyped long`)
+        # duplicate `int_type` capture name is intentional
+        if /\A((?<unsigned>un)?signed )?((?<int_type>long|short|long long)( int)?|(?<int_type>int|char))\z/ =~ name
+          #noinspection RubyResolve
+          int_type.tr!(' ', '_') # namely `long long` -> 'long_long'
+          #noinspection RubyResolve
+          unsigned ? :"u#{int_type}" : int_type.to_sym
         else
-          
-          # Check multi-keyword integer types (does not match unconventional styles such as `int long untyped long`)
-          # duplicate `int_type` capture name is intentional
-          if /\A((?<unsigned>un)?signed )?((?<int_type>long|short|long long)( int)?|(?<int_type>int|char))\z/ =~ name
-            #noinspection RubyResolve
-            int_type.tr!(' ', '_') # namely `long long` -> 'long_long'
-            #noinspection RubyResolve
-            unsigned ? :"u#{int_type}" : int_type.to_sym
-          else
-            # use type map and fallback
-            fallback = true
-            name_sym
-          end
+          # use type map and fallback
+          fallback = true
+          name_sym
         end
+      end
       
       begin
         @library.find_type(name_sym)
@@ -337,10 +338,16 @@ class FFI::UCtags
   end
   
   
-  # @deprecated Indefinite API
-  def finish
-    new_construct # flush the last bits
-    composite_types.each do |name, type|
+  # Assign each struct or union (or enum in future versions) in {#composite_types} to constants.
+  # 
+  # If the type’s name is invalid (not capitalized), capitalize the first character if possible
+  # (e.g., `qoi_desc` ➡ `Qoi_desc`), fall back to prefixing `S_` or `U_` depending on the type if not.
+  # If names collide or the constant is already defined (e.g., due to a previous call to this method),
+  # the previous definition is implicitly overridden (with Ruby complaining “already initialized constant”).
+  # 
+  # @return [Array[Symbol]] list of assigned names in {#composite_types}’s order.
+  def const_composites
+    composite_types.map do |name, type|
       # Prefer typedef name
       if type.is_a?(Symbol)
         name = type
@@ -349,24 +356,34 @@ class FFI::UCtags
       begin
         #noinspection RubyMismatchedArgumentType
         @library.const_set(name, type)
-      rescue NameError
+      rescue NameError # not a capitalized name
         # Capitalize first letter, prefix if cannot
         name = name.to_s
         first_char = name[0]
-        #noinspection RubyNilAnalysis
-        @library.const_set(
-          if first_char.capitalize! # capitalized
-            name[0] = first_char
-            name
-          elsif type < self.class.ffi_const(:Union)
-            "U_#{name}"
-          else # struct
-            "S_#{name}"
-          end,
-          type
-        )
+        name = if first_char&.capitalize! # capitalized
+          name[0] = first_char
+          name.to_sym
+        elsif type < self.class.ffi_const(:Union)
+          :"U_#{name}"
+        else # struct
+          :"S_#{name}"
+        end
+        @library.const_set(name, type)
+        name
       end
     end
-    library
+  end
+  
+  # Complete the work of this instance:
+  # 1. Finish up any ongoing progress (see {#new_construct})
+  # 2. ({#const_composites Assign structs and unions (and enums in future versions) to constants})
+  # 
+  # @note it is possible, albeit unorthodox, to continue use this instance after `close`ing it.
+  # 
+  # @return [Module & FFI::Library] {#library}
+  def close
+    new_construct # flush the last construct
+    const_composites
+    library # return
   end
 end

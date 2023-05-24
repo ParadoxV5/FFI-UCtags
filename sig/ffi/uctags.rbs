@@ -31,5 +31,6 @@ class FFI::UCtags
   def struct: (Symbol superclass, String name) -> Class
   def typedef: (Symbol name, fields fields) -> (FFI::Type | Class)
   
-  def finish: -> ffi_library
+  def const_composites: () -> Array[Symbol]
+  def close: () -> ffi_library
 end
