@@ -61,6 +61,8 @@ class FFI::UCtags
       FFI.const_get(name, true)
     end
     
+    # not a public API
+    private :new
     
     # Create a new [`Library`](https://rubydoc.info/gems/ffi/FFI/Library) module,
     # [load](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method) the named shared library,
@@ -71,14 +73,17 @@ class FFI::UCtags
     #   MyLib = FFI::UCtags.('mylib', 'path/to/mylib.h')
     #   puts MyLib.my_function(…)
     # 
+    # If providing a block, also evaluate it in the context of the new module (`Module#module_eval`).
+    # Beware that `module_eval` does not scope constants – you have to retrieve/write them like `self::THIS`.
+    # 
     # @param library_name [_ToS]
     # @param header_path [_ToS]
     # @return [Module & FFI::Library]
     #   the new `Library` module with every supported construct imported
     #   (See [the README section](..#constructs--ctags-kinds-support) for a list of supported constructs)
     # @see .ffi_module
-    def call(library_name, header_path)
-      worker = new(library_name)
+    def call(library_name, header_path, &blk)
+      instance = new(library_name)
       #noinspection SpellCheckingInspection
       cmd = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -]
       cmd << '-V' if $DEBUG
@@ -92,14 +97,11 @@ class FFI::UCtags
           name, file, line, k, *fields = line.split("\t")
           line.delete_suffix!(';"')
           puts "processing `#{name}` of kind `#{k}` (#{file}@#{line})" if $VERBOSE
-          worker.process(k, name, fields.to_h { _1.split(':', 2) })
+          instance.process(k, name, fields.to_h { _1.split(':', 2) })
         end
       end
-      worker.close
+      instance.close.tap { _1.module_eval(&blk) if block_given? }
     end
-    
-    
-    private :new
   end
   # Initialize class variable
   self.ffi_module = FFI

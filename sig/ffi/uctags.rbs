@@ -10,8 +10,8 @@ class FFI::UCtags
   def self.ffi_const: (Object::name name) -> bot
   def ffi_const: (Object::name name) -> bot
   
-  def self.call: (_ToS library_name, _ToS header_path) -> ffi_library
-  
+  private def self.new: (_ToS library_name) -> instance
+  def self.call: (_ToS library_name, _ToS header_path) ?{ () [self: ffi_library] -> void } -> ffi_library
   
   attr_reader library: ffi_library
   attr_reader composite_types: Hash[Symbol, Symbol | Class]
