@@ -142,9 +142,9 @@ class FFI::UCtags
   
   # Prepare building a new construct.
   # 
-  # If there’s a {#construct_builder} currently, invoke it with {#construct_members} splatted as args.
-  # Therefore, every construct must call this method to ensure the previous construct flushes through.
-  # Then, `Array#clear` the `construct_members` and store the given block (or `nil`) as the next `construct_builder`.
+  # First invoke {#construct_builder} if there’s one to ensure the previous construct flushes through,
+  # Then `Array#clear` the `construct_members` and store the given block (or `nil`) as the next `construct_builder`.
+  # Therefore, every new construct shall begin by call this method near the beginning.
   # 
   # {.call} processes a composite construct (e.g., a function or struct) as a sequence of consecutive components,
   # which starts with the construct itself followed by its original-ordered list of members
@@ -152,9 +152,12 @@ class FFI::UCtags
   # must queue the members {#construct_builder to compile later} until the next sequence commences,
   # especially that these sequences do not have terminator parts nor a member count in the header entry.
   # 
+  # @example
+  #   new_construct { do_something_with(construct_members) }
+  # 
   # Simpler constructs with only one u-ctags entry can simply call this method with no block (“`nil` block `&nil`”).
   def new_construct(&seq_proc2)
-    construct_builder&.(*construct_members)
+    construct_builder&.()
     construct_members.clear
     self.construct_builder = seq_proc2
   end
@@ -256,8 +259,11 @@ class FFI::UCtags
     end
   end
   
-  # todo use and mention sequence and other tools * highlight ex and proc type
   # Process the u-ctags kind.
+  # 
+  # For convenience (leading to performance), this method expects entries for composite construct
+  # (e.g., a function or struct) be consecutive. {.call} achieves this by executing u-ctags unsorted,
+  # preserving the order from the original file. See {#new_construct}.
   # 
   # @param k [String] one-letter kind ID
   # @param name [String]
@@ -266,15 +272,13 @@ class FFI::UCtags
     case k
     # Functions
     when 'z' # function parameters inside function or prototype definitions
-      self << extract_and_process_type(fields)
+      construct_members << extract_and_process_type(fields)
     when 'p' # function prototypes
-      open :attach_function
-      prefix name
-      suffix extract_and_process_type(fields)
+      type = extract_and_process_type(fields) # check type and fail fast
+      new_construct { library.attach_function name, construct_members, type }
     # Structs/Unions
     when 'm' # struct, and union members
-      self << name.to_sym
-      self << extract_and_process_type(fields)
+      construct_members.push name.to_sym, extract_and_process_type(fields)
     when 's' # structure names
       struct :Struct, name
     when 'u' # union names
@@ -283,7 +287,7 @@ class FFI::UCtags
     when 't' # typedefs
       typedef(name, fields)
     when 'x' # external and forward variable declarations
-      close
+      new_construct
       @library.attach_variable name, extract_and_process_type(fields)
     else
       warn "\tunsupported kind ignored" if $VERBOSE
@@ -297,9 +301,9 @@ class FFI::UCtags
   # @param name [String]
   # @return [Class]
   def struct(superclass, name)
-    type = Class.new(ffi_const superclass)
-    open type, :layout
-    composite_types[name.to_sym] = type
+    new_struct = Class.new(ffi_const superclass)
+    new_construct { new_struct.layout *construct_members }
+    composite_types[name.to_sym] = new_struct
   end
   # Register a typedef. Register in {#library} directly for basic types;
   # store in `composite_typedefs` (and update `composite_types`) for structs and unions (and enums in future versions).
@@ -307,8 +311,8 @@ class FFI::UCtags
   # @param name [String] new name
   # @param fields [Hash[String, String]] additional fields from {#process_kind}
   def typedef(name, fields)
-    close
     name = name.to_sym
+    new_construct
     type_name, is_pointer = extract_type(fields)
     if is_pointer.nil? # basic type
       @library.typedef find_type(type_name), name
@@ -325,7 +329,7 @@ class FFI::UCtags
   private
   
   public def finish
-    close # flush the last bits
+    new_construct # flush the last bits
     composite_types.each do |name, type|
       # Prefer typedef name
       if type.is_a?(Symbol)

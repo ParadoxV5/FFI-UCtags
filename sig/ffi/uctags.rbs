@@ -16,11 +16,11 @@ class FFI::UCtags
   attr_reader library: ffi_library
   attr_reader composite_types: Hash[Symbol, Symbol | Class]
   attr_reader composite_typedefs: Hash[Symbol, Class]
-  attr_accessor construct_builder: (^(*untyped) -> void)?
+  attr_accessor construct_builder: (^() -> void)?
   attr_reader construct_members: Array[untyped]
   def initialize: (_ToS library_name) -> void
   
-  def new_construct: () ?{ (*untyped) -> void } -> void
+  def new_construct: () ?{ () -> void } -> void
   
   def extract_type: (fields fields) -> [String, bool?]
   def find_type: (String name) -> FFI::Type
