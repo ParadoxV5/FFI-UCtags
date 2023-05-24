@@ -27,9 +27,9 @@ class FFI::UCtags
   def composite_type: (String name) -> Class
   def extract_and_process_type: (fields fields) -> FFI::Type
   
-  def process_kind: (String k, String name, fields fields) -> void
+  def process: (String k, String name, fields fields) -> void
   def struct: (Symbol superclass, String name) -> Class
-  def typedef: (String name, fields fields) -> void
+  def typedef: (Symbol name, fields fields) -> (FFI::Type | Class)
   
   def finish: -> ffi_library
 end

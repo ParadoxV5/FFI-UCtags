@@ -22,6 +22,15 @@ require_relative 'uctags/version'
 # 
 # Most use cases are only concerned with the main method {.call} and perhaps {.ffi_module} customization.
 # Other class and instance methods (including {#initialize}) are for advanced uses such as extending the gem.
+# 
+# Technical developers, you may also be interested in:
+# * {#process}
+#   * {#extract_and_process_type}
+#     * {#composite_types}
+#   * {#new_construct}
+#     * {#construct_members}
+# * {#library}
+# * {#ffi_const}
 class FFI::UCtags
   class << self
     # The module for {.call} to source constants (namely modules and classes) from; the default is {FFI}.
@@ -83,7 +92,7 @@ class FFI::UCtags
           name, file, line, k, *fields = line.split("\t")
           line.delete_suffix!(';"')
           puts "processing `#{name}` of kind `#{k}` (#{file}@#{line})" if $VERBOSE
-          worker.process_kind(k, name, fields.to_h { _1.split(':', 2) })
+          worker.process(k, name, fields.to_h { _1.split(':', 2) })
         end
       end
       worker.finish
@@ -117,7 +126,7 @@ class FFI::UCtags
   # The proc to build a composite construct from its members,
   # or `nil` if the current construct doesn’t need queued building – see {#new_construct}
   # 
-  # @return [(^(*untyped) -> void)?]
+  # @return [(^() -> void)?]
   attr_accessor :construct_builder
   # A queue for composite constructs’ members – see {#new_construct}
   # 
@@ -156,6 +165,8 @@ class FFI::UCtags
   #   new_construct { do_something_with(construct_members) }
   # 
   # Simpler constructs with only one u-ctags entry can simply call this method with no block (“`nil` block `&nil`”).
+  # 
+  # @return [void]
   def new_construct(&seq_proc2)
     construct_builder&.()
     construct_members.clear
@@ -169,7 +180,7 @@ class FFI::UCtags
   # Do not process the extracted name to a usable `FFI::Type`;
   # follow up with {#find_type} or {#composite_type}, or use {#extract_and_process_type} instead.
   # 
-  # @param fields [Hash[String, String]] additional fields from {#process_kind}
+  # @param fields [Hash[String, String]] additional fields from {#process}
   # @return [[String, bool?]]
   #   * the name of the extracted type,
   #   * `true` if it’s a struct or union (or enum in future versions), `false` if it’s a pointer to one of those, or `nil` if neither.
@@ -268,7 +279,8 @@ class FFI::UCtags
   # @param k [String] one-letter kind ID
   # @param name [String]
   # @param fields [Hash[String, String]] additional fields
-  def process_kind(k, name, fields)
+  # @return [void]
+  def process(k, name, fields)
     case k
     # Functions
     when 'z' # function parameters inside function or prototype definitions
@@ -285,7 +297,7 @@ class FFI::UCtags
       struct :Union, name
     # Miscellaneous
     when 't' # typedefs
-      typedef(name, fields)
+      typedef name.to_sym, fields
     when 'x' # external and forward variable declarations
       new_construct
       @library.attach_variable name, extract_and_process_type(fields)
@@ -308,27 +320,25 @@ class FFI::UCtags
   # Register a typedef. Register in {#library} directly for basic types;
   # store in `composite_typedefs` (and update `composite_types`) for structs and unions (and enums in future versions).
   # 
-  # @param name [String] new name
-  # @param fields [Hash[String, String]] additional fields from {#process_kind}
+  # @param name [Symbol] new name
+  # @param fields [Hash[String, String]] additional fields from {#process}
+  # @return [FFI::Type | Class]
   def typedef(name, fields)
-    name = name.to_sym
     new_construct
     type_name, is_pointer = extract_type(fields)
     if is_pointer.nil? # basic type
       @library.typedef find_type(type_name), name
-    else # structural type
-      type_name = type_name.to_sym
-      composite_typedefs[name] = composite_types.fetch(type_name)
-      composite_types[type_name] = name
+    else # composite type
+      type = composite_type(type_name)
+      composite_typedefs[name] = type
+      composite_types[type_name.to_sym] = name
+      type
     end
   end
   
   
-  ## Indefinite API follows ##
-  
-  private
-  
-  public def finish
+  # @deprecated Indefinite API
+  def finish
     new_construct # flush the last bits
     composite_types.each do |name, type|
       # Prefer typedef name
