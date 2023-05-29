@@ -28,7 +28,7 @@ require_relative 'uctags/version'
 #   * {#extract_and_process_type}
 #     * {#composite_types}
 #   * {#new_construct}
-#     * {#construct_members}
+#     * {#stack}
 # * {#library}
 # * {#ffi_const}
 class FFI::UCtags
@@ -115,25 +115,28 @@ class FFI::UCtags
   # @return [Module & FFI::Library]
   attr_reader :library
   
-  # Maps struct/union (and enum in future versions) names to either
-  # the class [Class] or its {#composite_typedefs} key [Symbol]
+  # A hash that maps struct/union (and enum in future versions) names to either:
+  # * the class [Class] directly
+  # * its (newest) {#composite_typedefs} key [Symbol], for structs/unions with typedefs.
+  #   * This design allows {#const_composites} to prefer the (newest) typedef alias over the original,
+  #     which is often omitted though the typedef-struct and equivalent patterns.
   # 
   # @return [Hash[Symbol, Symbol | Class]]
   attr_reader :composite_types
-  # Records typedef-struct/unions (and typedef-enums in future versions)
+  # Table of typedef-struct/unions (and typedef-enums in future versions)
   # 
   # @return [Hash[Symbol, Class]]
   attr_reader :composite_typedefs
   
-  # The proc to build a composite construct from its members,
-  # or `nil` if the current construct doesn’t need queued building – see {#new_construct}
+  # A LIFO array for work-in-progress constructs, most notably functions and structs.
+  # The stack design enables building an inner construct (top of the stack) while putting outer constructs on hold.
   # 
-  # @return [(^() -> void)?]
-  attr_accessor :construct_builder
-  # A queue for composite constructs’ members – see {#new_construct}
+  # Each element is a 2-tuple of a construct member queue and a proc (or equivalent).
+  # When ready, the proc is called with the populated member list as a single argument.
   # 
-  # @return [Array[untyped]]
-  attr_reader :construct_members
+  # @return [Array[[Array[untyped], ^(Array[untyped]) -> void]]
+  # @see #new_construct
+  attr_reader :stack
   
   # Create an instance for working on the named shared library.
   # The attribute {#library} is set to a new [`Library`](https://rubydoc.info/gems/ffi/FFI/Library)
@@ -147,20 +150,20 @@ class FFI::UCtags
     
     @composite_types = {}
     @composite_typedefs = {}
-    @construct_members = []
+    @stack = []
   end
   
   
   # Prepare building a new construct.
   # 
-  # First invoke {#construct_builder} if there’s one to ensure the previous construct flushes through,
-  # Then `Array#clear` the `construct_members` and store the given block (or `nil`) as the next `construct_builder`.
+  # First invoke the procs of {#stack} in reverse order to ensure the previous constructs flush through,
+  # Then `Array#clear` the `stack`. Finally, if a given a block, store it as a new stack entry.
   # Therefore, every new construct shall begin by call this method near the beginning.
   # 
   # {.call} processes a composite construct (e.g., a function or struct) as a sequence of consecutive components,
   # which starts with the construct itself followed by its original-ordered list of members
-  # (e.g., function params, struct members), all as separate full-sized entries. Therefore, {#construct_members a list}
-  # must queue the members {#construct_builder to compile later} until the next sequence commences,
+  # (e.g., function params, struct members), all as separate full-sized entries.
+  # Therefore, {#stack a list} must queue the members to compile later until the next sequence commences,
   # especially that these sequences do not have terminator parts nor a member count in the header entry.
   # 
   # @example
@@ -169,10 +172,10 @@ class FFI::UCtags
   # Simpler constructs with only one u-ctags entry can simply call this method with no block (“`nil` block `&nil`”).
   # 
   # @return [void]
-  def new_construct(&seq_proc2)
-    construct_builder&.()
-    construct_members.clear
-    self.construct_builder = seq_proc2
+  def new_construct(&blk)
+    stack.reverse_each { _2.(_1) }
+    stack.clear
+    stack << [[], blk] if blk
   end
   
   
@@ -287,13 +290,13 @@ class FFI::UCtags
     case k
     # Functions
     when 'z' # function parameters inside function or prototype definitions
-      construct_members << extract_and_process_type(fields)
+      stack.last&.first&.<< extract_and_process_type(fields)
     when 'p' # function prototypes
       type = extract_and_process_type(fields) # check type and fail fast
-      new_construct { library.attach_function name, construct_members, type }
+      new_construct { library.attach_function name, _1, type }
     # Structs/Unions
     when 'm' # struct, and union members
-      construct_members.push name.to_sym, extract_and_process_type(fields)
+      stack.last&.first&.push name.to_sym, extract_and_process_type(fields)
     when 's' # structure names
       struct :Struct, name
     when 'u' # union names
@@ -317,7 +320,7 @@ class FFI::UCtags
   # @return [Class]
   def struct(superclass, name)
     new_struct = Class.new(ffi_const superclass)
-    new_construct { new_struct.layout *construct_members }
+    new_construct { new_struct.layout(*_1) }
     composite_types[name.to_sym] = new_struct
   end
   # Register a typedef. Register in {#library} directly for basic types;
