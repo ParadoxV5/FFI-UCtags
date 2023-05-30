@@ -32,6 +32,7 @@ instead relies on code review and small test subjects.
   * `m` struct, and union members
   * `s` structure names
   * `u` union names
+  * nested structs and unions
   * currently does not recognize pointer to struct/union typedefs
 
 ### 🔜 To Do

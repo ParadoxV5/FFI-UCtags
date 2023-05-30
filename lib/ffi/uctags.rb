@@ -132,7 +132,7 @@ class FFI::UCtags
   # The stack design enables building an inner construct (top of the stack) while putting outer constructs on hold.
   # 
   # Each element is a 2-tuple of a construct member queue and a proc (or equivalent).
-  # When ready, the proc is called with the populated member list as a single argument.
+  # When ready, the proc is called with the populated member list as a single arg.
   # 
   # @return [Array[[Array[untyped], ^(Array[untyped]) -> void]]
   # @see #new_construct
@@ -154,11 +154,11 @@ class FFI::UCtags
   end
   
   
-  # Prepare building a new construct.
+  # Prepare building a new construct. This method is designed for every new construct to call near the beginning. 
   # 
-  # First invoke the procs of {#stack} in reverse order to ensure the previous constructs flush through,
-  # Then `Array#clear` the `stack`. Finally, if a given a block, store it as a new stack entry.
-  # Therefore, every new construct shall begin by call this method near the beginning.
+  # `Array#slice!` off the `depth`-th entry in the {#stack} and all entries above it.
+  # Invoke the procs of the removed entries in reverse order to ensure these previous constructs flush through.
+  # Finally, if a given a block, start a new stack entry with it.
   # 
   # {.call} processes a composite construct (e.g., a function or struct) as a sequence of consecutive components,
   # which starts with the construct itself followed by its original-ordered list of members
@@ -171,17 +171,23 @@ class FFI::UCtags
   # 
   # Simpler constructs with only one u-ctags entry can simply call this method with no block (“`nil` block `&nil`”).
   # 
+  # @param depth [int] The depth to start the construct from.
+  #   * Non-negative integers refers to n-th nested levels
+  #     * 0 = toplevel => clear and flush the entire stack
+  #   * Negatives are relative to one deeper than the current innermost level
+  #     * -1 = replace the innermost nesting => remove and flush the last stack entry
   # @return [void]
-  def new_construct(&blk)
-    stack.reverse_each { _2.(_1) }
-    stack.clear
+  def new_construct(depth = 0, &blk)
+    stack.slice!(depth..)&.reverse_each { _2.(_1) }
     stack << [[], blk] if blk
   end
   
   
   # Extract the type name from the give u-ctags fields.
   # 
+  # Rips off names of types it nests under as all public names in C live in the same global namespace.
   # Identify and processes pointers to and arrays of structs or unions (or enums in future versions).
+  # 
   # Do not process the extracted name to a usable `FFI::Type`;
   # follow up with {#find_type} or {#composite_type}, or use {#extract_and_process_type} instead.
   # 
@@ -190,7 +196,7 @@ class FFI::UCtags
   #   * the name of the extracted type,
   #   * `true` if it’s a struct or union (or enum in future versions), `false` if it’s a pointer to one of those, or `nil` if neither.
   def extract_type(fields)
-    type, name = fields.fetch('typeref').split(':', 2)
+    type, *_, name = fields.fetch('typeref').split(':')
     if 'typename'.eql?(type) # basic type
       [name, nil]
     elsif name.end_with?('[]') # array
@@ -298,9 +304,9 @@ class FFI::UCtags
     when 'm' # struct, and union members
       stack.last&.first&.push name.to_sym, extract_and_process_type(fields)
     when 's' # structure names
-      struct :Struct, name
+      struct :Struct, name, fields
     when 'u' # union names
-      struct :Union, name
+      struct :Union, name, fields
     # Miscellaneous
     when 't' # typedefs
       typedef name.to_sym, fields
@@ -318,9 +324,12 @@ class FFI::UCtags
   # @param superclass [Symbol] symbol of the superclass constant (i.e., `:Struct` or `:Union`)
   # @param name [String]
   # @return [Class]
-  def struct(superclass, name)
+  def struct(superclass, name, fields)
     new_struct = Class.new(ffi_const superclass)
-    new_construct { new_struct.layout(*_1) }
+    depth = fields.fetch('struct') { fields.fetch('union', nil) }
+    depth = depth ? (depth.count(':') >> 1).succ : 0
+      # Most performant solution so far. `::` count = `:` count / 2; element count = delimiter count + 1
+    new_construct(depth) { new_struct.layout(*_1) }
     composite_types[name.to_sym] = new_struct
   end
   # Register a typedef. Register in {#library} directly for basic types;
