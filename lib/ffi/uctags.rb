@@ -87,7 +87,7 @@ class FFI::UCtags
     def call(library_name, header_path, &blk)
       instance = new(library_name)
       #noinspection SpellCheckingInspection
-      cmd = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -]
+      cmd = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -] #: Array[_ToS]
       cmd << '-V' if $DEBUG
       cmd << header_path
       # Run and pipe-read. `err: :err` connects command stderr to Ruby stderr
@@ -152,7 +152,7 @@ class FFI::UCtags
   # 
   # @param library_name [_ToS]
   def initialize(library_name)
-    @library = Module.new
+    @library = Module.new #: FFI::library
     @library.extend(ffi_const :Library)
     @library.ffi_lib(library_name)
     
@@ -341,7 +341,7 @@ class FFI::UCtags
   # @param name [String]
   # @return [Class]
   def struct(superclass, name)
-    new_struct = Class.new(ffi_const superclass)
+    new_struct = Class.new(ffi_const superclass) #: singleton(FFI::Struct)
     namespace = @fields.fetch('struct') { @fields.fetch('union', nil) }
     if namespace
       namespace = namespace.split('::')
@@ -352,6 +352,7 @@ class FFI::UCtags
       depth = 0
     end
     new_construct(depth) { new_struct.layout(*_1) }
+    #noinspection RubyMismatchedReturnType
     composite_types[name.to_sym] = new_struct
   end
   # Register a typedef. Register in {#library} directly for basic types;

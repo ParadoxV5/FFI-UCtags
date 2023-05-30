@@ -1,5 +1,16 @@
 # Select stubs
 module FFI
-  module Library end
-  class Type end
+  module Library
+  end
+  type library = Module & Library
+  
+  class Struct
+    def self.layout: (*untyped spec) -> StructLayout
+  end
+  
+  class StructLayout
+  end
+  
+  class Type
+  end
 end

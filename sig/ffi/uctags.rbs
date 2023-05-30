@@ -1,6 +1,6 @@
 class FFI::UCtags
-  type ffi_library = Module & FFI::Library
   type members[T] = Array[T]
+  type composite_type = singleton(FFI::Struct) # or enum in future versions
   type stack_entry[T] = [members[T], ^(members[T]) -> void]
   
   VERSION: String
@@ -11,12 +11,12 @@ class FFI::UCtags
   def ffi_const: (Object::name name) -> bot
   
   private def self.new: (_ToS library_name) -> instance
-  def self.call: (_ToS library_name, _ToS header_path) ?{ () [self: ffi_library] -> void } -> ffi_library
+  def self.call: (_ToS library_name, _ToS header_path) ?{ () [self: FFI::library] -> void } -> FFI::library
   
-  attr_reader library: ffi_library
-  attr_reader composite_types: Hash[Symbol, Symbol | Class]
-  attr_reader composite_typedefs: Hash[Symbol, Class]
-  attr_reader composite_namespacing: Hash[Class, Class]
+  attr_reader library: FFI::library
+  attr_reader composite_types: Hash[Symbol, Symbol | composite_type]
+  attr_reader composite_typedefs: Hash[Symbol, composite_type]
+  attr_reader composite_namespacing: Hash[composite_type, singleton(FFI::Struct)]
   attr_reader stack: Array[stack_entry[untyped]]
   @fields: Hash[String, String]
   def initialize: (_ToS library_name) -> void
@@ -25,13 +25,13 @@ class FFI::UCtags
   
   def extract_type: () -> [String, bool?]
   def find_type: (String name) -> FFI::Type
-  def composite_type: (String name) -> Class
+  def composite_type: (String name) -> composite_type
   def extract_and_process_type: () -> FFI::Type
   
   def process: (String k, String name, Hash[String, String] fields) -> void
-  def struct: (Symbol superclass, String name) -> Class
-  def typedef: (Symbol name) -> (FFI::Type | Class)
+  def struct: (Symbol superclass, String name) -> singleton(FFI::Struct)
+  def typedef: (Symbol name) -> (FFI::Type | composite_type)
   
   def const_composites: () -> Array[Symbol]
-  def close: () -> ffi_library
+  def close: () -> FFI::library
 end
