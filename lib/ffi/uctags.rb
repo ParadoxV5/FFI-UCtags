@@ -22,6 +22,8 @@ require_relative 'uctags/version'
 # 
 # Most use cases are only concerned with the main method {.call} and perhaps {.ffi_module} customization.
 # Other class and instance methods (including {#initialize}) are for advanced uses such as extending the gem.
+# Since instantiating is not intended, {.new the constructor} has turned private;
+# of course, nothing’s stopping you from un-privatizing it.
 # 
 # Technical developers, you may also be interested in:
 # * {#process}
@@ -61,7 +63,7 @@ class FFI::UCtags
       FFI.const_get(name, true)
     end
     
-    # not a public API
+    # Not a public API – see {UCtags}
     private :new
     
     # Create a new [`Library`](https://rubydoc.info/gems/ffi/FFI/Library) module,
@@ -106,7 +108,7 @@ class FFI::UCtags
   # Initialize class variable
   self.ffi_module = FFI
   
-  # (see .ffi_const)
+  # Instance-level delegate for {.ffi_const}
   def ffi_const(...) = self.class.ffi_const(...)
   
   
@@ -141,6 +143,8 @@ class FFI::UCtags
   # Create an instance for working on the named shared library.
   # The attribute {#library} is set to a new [`Library`](https://rubydoc.info/gems/ffi/FFI/Library)
   # module with the named shared library [loaded](https://rubydoc.info/gems/ffi/FFI/Library#ffi_lib-instance_method).
+  # 
+  # @note `::new` is private. See {UCtags the class description} for the intention.
   # 
   # @param library_name [_ToS]
   def initialize(library_name)
