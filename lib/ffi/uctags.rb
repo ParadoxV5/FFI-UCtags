@@ -129,6 +129,10 @@ class FFI::UCtags
   # 
   # @return [Hash[Symbol, Class]]
   attr_reader :composite_typedefs
+  # A hash that maps inner structs/unions (and enum in future versions) to their outer structs/unions
+  # 
+  # @return [Hash[Class, Class]]
+  attr_reader :composite_namespacing
   
   # A LIFO array for work-in-progress constructs, most notably functions and structs.
   # The stack design enables building an inner construct (top of the stack) while putting outer constructs on hold.
@@ -154,6 +158,7 @@ class FFI::UCtags
     
     @composite_types = {}
     @composite_typedefs = {}
+    @composite_namespacing = {}
     @stack = []
   end
   
@@ -330,9 +335,14 @@ class FFI::UCtags
   # @return [Class]
   def struct(superclass, name, fields)
     new_struct = Class.new(ffi_const superclass)
-    depth = fields.fetch('struct') { fields.fetch('union', nil) }
-    depth = depth ? (depth.count(':') >> 1).succ : 0
-      # Most performant solution so far. `::` count = `:` count / 2; element count = delimiter count + 1
+    namespace = fields.fetch('struct') { fields.fetch('union', nil) }
+    if namespace
+      namespace = namespace.split('::')
+      composite_namespacing[new_struct] = composite_type(namespace.last)
+      depth = namespace.size
+    else
+      depth = 0
+    end
     new_construct(depth) { new_struct.layout(*_1) }
     composite_types[name.to_sym] = new_struct
   end
@@ -371,9 +381,10 @@ class FFI::UCtags
         name = type
         type = composite_typedefs.fetch(type)
       end
+      #noinspection RubyMismatchedArgumentType
+      namespace = composite_namespacing.fetch(type, @library) #: Module
       begin
-        #noinspection RubyMismatchedArgumentType
-        @library.const_set(name, type)
+        namespace.const_set(name, type)
       rescue NameError # not a capitalized name
         # Capitalize first letter, prefix if cannot
         name = name.to_s
@@ -386,7 +397,7 @@ class FFI::UCtags
         else # struct
           :"S_#{name}"
         end
-        @library.const_set(name, type)
+        namespace.const_set(name, type)
         name
       end
     end

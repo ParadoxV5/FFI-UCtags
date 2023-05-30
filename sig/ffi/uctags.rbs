@@ -17,6 +17,7 @@ class FFI::UCtags
   attr_reader library: ffi_library
   attr_reader composite_types: Hash[Symbol, Symbol | Class]
   attr_reader composite_typedefs: Hash[Symbol, Class]
+  attr_reader composite_namespacing: Hash[Class, Class]
   attr_reader stack: Array[stack_entry[untyped]]
   def initialize: (_ToS library_name) -> void
   
