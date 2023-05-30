@@ -160,6 +160,7 @@ class FFI::UCtags
     @composite_typedefs = {}
     @composite_namespacing = {}
     @stack = []
+    @fields = {} # `nil` error prevention
   end
   
   
@@ -192,7 +193,7 @@ class FFI::UCtags
   end
   
   
-  # Extract the type name from the give u-ctags fields.
+  # Extract the type name from `@fields` (see {#process}).
   # 
   # Rips off names of types it nests under as all public names in C live in the same global namespace.
   # Identify and processes pointers to and arrays of structs or unions (or enums in future versions).
@@ -200,12 +201,11 @@ class FFI::UCtags
   # Do not process the extracted name to a usable `FFI::Type`;
   # follow up with {#find_type} or {#composite_type}, or use {#extract_and_process_type} instead.
   # 
-  # @param fields [Hash[String, String]] additional fields from {#process}
   # @return [[String, bool?]]
   #   * the name of the extracted type,
   #   * `true` if it’s a struct or union (or enum in future versions), `false` if it’s a pointer to one of those, or `nil` if neither.
-  def extract_type(fields)
-    type, *_, name = fields.fetch('typeref').split(':')
+  def extract_type
+    type, *_, name = @fields.fetch('typeref').split(':')
     if 'typename'.eql?(type) # basic type
       [name, nil]
     elsif name.end_with?('[]') # array
@@ -275,14 +275,13 @@ class FFI::UCtags
     type.is_a?(Symbol) ? composite_typedefs.fetch(type) : type
   end
   
-  # {#extract_type Extract} and process ({#find_type} or {#composite_type}) the type from the give u-ctags fields.
+  # {#extract_type Extract} and process ({#find_type} or {#composite_type}) the type from `@fields` (see {#process}).
   # 
-  # @param (see #extract_type)
   # @return [FFI::Type]
   # @raise [TypeError] if it’s a basic type with an unrecognized name
   # @raise [KeyError] if it’s a struct or union (or enum in future versions) with an unregistered name
-  def extract_and_process_type(...)
-    name, is_pointer = extract_type(...)
+  def extract_and_process_type
+    name, is_pointer = extract_type
     if is_pointer.nil? # basic type
       find_type(name)
     else
@@ -291,37 +290,45 @@ class FFI::UCtags
     end
   end
   
-  # Process the u-ctags kind.
+  # Process the u-ctags entry.
+  # 
+  # This is the controller for processing various u-ctags kinds. Due to the popularity,
+  # this stores the argument `fields` in `@fields` instead of passing it as an arg when calling helper methods.
   # 
   # For convenience (leading to performance), this method expects entries for composite construct
   # (e.g., a function or struct) be consecutive. {.call} achieves this by executing u-ctags unsorted,
   # preserving the order from the original file. See {#new_construct}.
   # 
-  # @param k [String] one-letter kind ID
-  # @param name [String]
-  # @param fields [Hash[String, String]] additional fields
+  # @note
+  #   UCtags holds off from creating access points (constants) for structs/unions (and enums in future versions)
+  #   until calling {#const_composites} (or {#close}), as they may later receive a preferred typedef name.
+  # 
+  # @param k [String] one-letter u-ctags kind ID
+  # @param name [String] the name of the construct or component; i.e., the u-ctags tag name
+  # @param fields [Hash[String, String]] additional u-ctags fields (e.g., `{'typeref' => 'typename:int'}`)
   # @return [void]
   def process(k, name, fields)
+    @fields.replace(fields)
     case k
     # Functions
     when 'z' # function parameters inside function or prototype definitions
-      stack.last&.first&.<< extract_and_process_type(fields)
+      stack.last&.first&.<< extract_and_process_type
     when 'p' # function prototypes
-      type = extract_and_process_type(fields) # check type and fail fast
+      type = extract_and_process_type # check type and fail fast
       new_construct { library.attach_function name, _1, type }
     # Structs/Unions
     when 'm' # struct, and union members
-      stack.last&.first&.push name.to_sym, extract_and_process_type(fields)
+      stack.last&.first&.push name.to_sym, extract_and_process_type
     when 's' # structure names
-      struct :Struct, name, fields
+      struct :Struct, name
     when 'u' # union names
-      struct :Union, name, fields
+      struct :Union, name
     # Miscellaneous
     when 't' # typedefs
-      typedef name.to_sym, fields
+      typedef name.to_sym
     when 'x' # external and forward variable declarations
       new_construct
-      @library.attach_variable name, extract_and_process_type(fields)
+      @library.attach_variable name, extract_and_process_type
     else
       warn "\tunsupported kind ignored" if $VERBOSE
     end
@@ -333,11 +340,12 @@ class FFI::UCtags
   # @param superclass [Symbol] symbol of the superclass constant (i.e., `:Struct` or `:Union`)
   # @param name [String]
   # @return [Class]
-  def struct(superclass, name, fields)
+  def struct(superclass, name)
     new_struct = Class.new(ffi_const superclass)
-    namespace = fields.fetch('struct') { fields.fetch('union', nil) }
+    namespace = @fields.fetch('struct') { @fields.fetch('union', nil) }
     if namespace
       namespace = namespace.split('::')
+      #noinspection RubyMismatchedArgumentType
       composite_namespacing[new_struct] = composite_type(namespace.last)
       depth = namespace.size
     else
@@ -350,11 +358,10 @@ class FFI::UCtags
   # store in `composite_typedefs` (and update `composite_types`) for structs and unions (and enums in future versions).
   # 
   # @param name [Symbol] new name
-  # @param fields [Hash[String, String]] additional fields from {#process}
   # @return [FFI::Type | Class]
-  def typedef(name, fields)
+  def typedef(name)
     new_construct
-    type_name, is_pointer = extract_type(fields)
+    type_name, is_pointer = extract_type
     if is_pointer.nil? # basic type
       @library.typedef find_type(type_name), name
     else # composite type

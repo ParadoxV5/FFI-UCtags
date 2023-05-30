@@ -1,6 +1,5 @@
 class FFI::UCtags
   type ffi_library = Module & FFI::Library
-  type fields = Hash[String, String]
   type members[T] = Array[T]
   type stack_entry[T] = [members[T], ^(members[T]) -> void]
   
@@ -19,18 +18,19 @@ class FFI::UCtags
   attr_reader composite_typedefs: Hash[Symbol, Class]
   attr_reader composite_namespacing: Hash[Class, Class]
   attr_reader stack: Array[stack_entry[untyped]]
+  @fields: Hash[String, String]
   def initialize: (_ToS library_name) -> void
   
   def new_construct: [T] (?int depth) ?{ (members[T]) -> void } -> void
   
-  def extract_type: (fields fields) -> [String, bool?]
+  def extract_type: () -> [String, bool?]
   def find_type: (String name) -> FFI::Type
   def composite_type: (String name) -> Class
-  def extract_and_process_type: (fields fields) -> FFI::Type
+  def extract_and_process_type: () -> FFI::Type
   
-  def process: (String k, String name, fields fields) -> void
-  def struct: (Symbol superclass, String name, fields fields) -> Class
-  def typedef: (Symbol name, fields fields) -> (FFI::Type | Class)
+  def process: (String k, String name, Hash[String, String] fields) -> void
+  def struct: (Symbol superclass, String name) -> Class
+  def typedef: (Symbol name) -> (FFI::Type | Class)
   
   def const_composites: () -> Array[Symbol]
   def close: () -> ffi_library
