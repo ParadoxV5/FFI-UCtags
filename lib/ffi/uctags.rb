@@ -18,11 +18,12 @@ require 'ffi'
 require_relative 'uctags/version'
 
 
-# Auto-load FFI functions and etc. by parsing a C header file. See [the README](..) for an overview of the gem.
+# Auto-load FFI functions and etc. by parsing a C header file.
+# See [the README](..) for an overview of the gem with an example.
 # 
-# Most use cases are only concerned with the main method {.call} and perhaps {.ffi_module} customization.
+# Most use cases are only concerned with calling the main method {.call} and perhaps an {.ffi_module} customization.
 # Other class and instance methods (including {#initialize}) are for advanced uses such as extending the gem.
-# Since instantiating is not intended, {.new the constructor} has turned private;
+# Since instantiating is not intended, `::new` has turned private;
 # of course, nothing’s stopping you from un-privatizing it.
 # 
 # Technical developers, you may also be interested in:
@@ -238,7 +239,7 @@ class FFI::UCtags
     [name, is_pointer]
   end
   
-  # Find the named type from {#library}.
+  # Find the named type from {#library} (or {#composite_typedefs}).
   # 
   # Find typedefs. Do not find structs, unions and enums (future versions); use {#composite_type} for those.
   # Fall back to `TYPE_POINTER` for unrecognized unique names.
