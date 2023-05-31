@@ -166,7 +166,7 @@ class FFI::UCtags
   
   # Prepare building a new construct. This method is designed for every new construct to call near the beginning. 
   # 
-  # `Array#slice!` off the `depth`-th entry in the {#stack} and all entries above it.
+  # `Array#slice!` off topmost entries in the {#stack} according to `@fields`.
   # Invoke the procs of the removed entries in reverse order to ensure these previous constructs flush through.
   # Finally, if a given a block, start a new stack entry with it.
   # 
@@ -181,13 +181,19 @@ class FFI::UCtags
   # 
   # Simpler constructs with only one u-ctags entry can simply call this method with no block (“`nil` block `&nil`”).
   # 
-  # @param depth [int] The depth to start the construct from.
-  #   * Non-negative integers refers to n-th nested levels
-  #     * 0 = toplevel => clear and flush the entire stack
-  #   * Negatives are relative to one deeper than the current innermost level
-  #     * -1 = replace the innermost nesting => remove and flush the last stack entry
-  # @return [void]
-  def new_construct(depth = 0, &blk)
+  # @return [String?]
+  #   The name of the namespace this construct should define under as parsed from `@fields` (see {#process})
+  def new_construct(&blk)
+    namespace = @fields.fetch('struct') { @fields.fetch('union', nil) }
+    prev_namespace = nil
+    depth = if namespace
+      namespace = namespace.split('::')
+      prev_namespace = namespace.last #: String
+      puts "\tunder `#{prev_namespace}`" if $VERBOSE
+      namespace.size
+    else
+      0
+    end
     if (prev = stack.slice!(depth..)) and not prev.empty?
       puts "\tflushing #{prev.size} stack entries" if $VERBOSE
       prev.reverse_each do |args, a_proc|
@@ -200,6 +206,8 @@ class FFI::UCtags
       stack << [[], blk]
     end
     puts "\tstack has #{stack.size} entries" if $VERBOSE
+    #noinspection RubyMismatchedReturnType RubyMine prefers Yardoc type over RBS type
+    prev_namespace
   end
   
   
@@ -357,18 +365,8 @@ class FFI::UCtags
   # @return [Class]
   def struct(superclass, name)
     new_struct = Class.new(ffi_const superclass) #: singleton(FFI::Struct)
-    namespace = @fields.fetch('struct') { @fields.fetch('union', nil) }
-    if namespace
-      namespace = namespace.split('::')
-      prev_namespace = namespace.last #: String
-      puts "\tunder class `#{prev_namespace}`" if $VERBOSE
-      #noinspection RubyMismatchedArgumentType RubyMine ignores inline RBS annotations
-      composite_namespacing[new_struct] = composite_type(prev_namespace)
-      depth = namespace.size
-    else
-      depth = 0
-    end
-    new_construct(depth) { new_struct.layout(*_1) }
+    prev_namespace = new_construct { new_struct.layout(*_1) }
+    composite_namespacing[new_struct] = composite_type(prev_namespace) if prev_namespace
     #noinspection RubyMismatchedReturnType RubyMine ignores inline RBS annotations
     composite_types[name.to_sym] = new_struct
   end

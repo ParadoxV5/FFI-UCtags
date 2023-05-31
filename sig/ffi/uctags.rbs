@@ -21,7 +21,7 @@ class FFI::UCtags
   @fields: Hash[String, String]
   def initialize: (_ToS library_name) -> void
   
-  def new_construct: [T] (?int depth) ?{ (members[T]) -> void } -> void
+  def new_construct: [T] () ?{ (members[T]) -> void } -> String?
   
   def extract_type: () -> [String, bool?]
   def find_type: (String name) -> FFI::Type
