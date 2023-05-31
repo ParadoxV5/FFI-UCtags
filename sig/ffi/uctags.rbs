@@ -29,7 +29,7 @@ class FFI::UCtags
   def extract_and_process_type: () -> FFI::Type
   
   def process: (String k, String name, Hash[String, String] fields) -> void
-  def struct: (Symbol superclass, String name) -> singleton(FFI::Struct)
+  def struct: (Symbol superclass, Symbol name) -> singleton(FFI::Struct)
   def typedef: (Symbol name) -> (FFI::Type | composite_type)
   
   def const_composites: () -> Array[Symbol]

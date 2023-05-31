@@ -341,11 +341,12 @@ class FFI::UCtags
       new_construct { library.attach_function name, _1, type }
     # Structs/Unions
     when 'm' # struct, and union members
+      new_construct
       stack.last&.first&.push name.to_sym, extract_and_process_type
     when 's' # structure names
-      struct :Struct, name
+      struct :Struct, name.to_sym
     when 'u' # union names
-      struct :Union, name
+      struct :Union, name.to_sym
     # Miscellaneous
     when 't' # typedefs
       typedef name.to_sym
@@ -361,19 +362,20 @@ class FFI::UCtags
   # Build and record a new struct or union class
   # 
   # @param superclass [Symbol] symbol of the superclass constant (i.e., `:Struct` or `:Union`)
-  # @param name [String]
+  # @param name [Symbol]
   # @return [Class]
   def struct(superclass, name)
     new_struct = Class.new(ffi_const superclass) #: singleton(FFI::Struct)
     prev_namespace = new_construct { new_struct.layout(*_1) }
     composite_namespacing[new_struct] = composite_type(prev_namespace) if prev_namespace
     #noinspection RubyMismatchedReturnType RubyMine ignores inline RBS annotations
-    composite_types[name.to_sym] = new_struct
+    composite_types[name] = new_struct
   end
+  
   # Register a typedef. Register in {#library} directly for basic types;
   # store in `composite_typedefs` (and update `composite_types`) for structs and unions (and enums in future versions).
   # 
-  # @param name [Symbol] new name
+  # @param name [Symbol] the new name
   # @return [FFI::Type | Class]
   def typedef(name)
     new_construct
