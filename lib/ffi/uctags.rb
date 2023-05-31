@@ -86,7 +86,7 @@ class FFI::UCtags
     # @see .ffi_module
     def call(library_name, header_path, &blk)
       instance = new(library_name)
-      #noinspection SpellCheckingInspection
+      #noinspection SpellCheckingInspection this command use letter flags
       cmd = %w[ctags --language-force=C --kinds-C=mpstuxz --fields=NFPkst -nuo -] #: Array[_ToS]
       cmd << '-V' if $DEBUG
       cmd << header_path
@@ -188,8 +188,18 @@ class FFI::UCtags
   #     * -1 = replace the innermost nesting => remove and flush the last stack entry
   # @return [void]
   def new_construct(depth = 0, &blk)
-    stack.slice!(depth..)&.reverse_each { _2.(_1) }
-    stack << [[], blk] if blk
+    if (prev = stack.slice!(depth..)) and not prev.empty?
+      puts "\tflushing #{prev.size} stack entries" if $VERBOSE
+      prev.reverse_each do |args, a_proc|
+        puts "\t\twith #{args.size} members" if $VERBOSE
+        a_proc.(args)
+      end
+    end
+    if blk
+      puts "\tstarting new stack entry" if $VERBOSE
+      stack << [[], blk]
+    end
+    puts "\tstack has #{stack.size} entries" if $VERBOSE
   end
   
   
@@ -205,14 +215,19 @@ class FFI::UCtags
   #   * the name of the extracted type,
   #   * `true` if it’s a struct or union (or enum in future versions), `false` if it’s a pointer to one of those, or `nil` if neither.
   def extract_type
-    type, *_, name = @fields.fetch('typeref').split(':')
-    if 'typename'.eql?(type) # basic type
-      [name, nil]
+    type_type, *_, name = @fields.fetch('typeref').split(':')
+    is_pointer = if 'typename'.eql?(type_type) # basic type
+      puts "\tbasic type `#{name}`" if $VERBOSE
+      nil
     elsif name.end_with?('[]') # array
-      ['void *', nil] # FFI does not support typed array auto-casting
+      puts "\tarray type" if $VERBOSE
+      name = 'void *' # FFI does not support typed array auto-casting
+      nil
     else
-      [name, name.delete_suffix!(' *').nil?] # […, whether pointer suffix not deleted]
+      puts "\t#{type_type} type `#{name}`" if $VERBOSE
+      name.delete_suffix!(' *').nil? # whether pointer suffix not deleted
     end
+    [name, is_pointer]
   end
   
   # Find the named type from {#library}.
@@ -240,9 +255,9 @@ class FFI::UCtags
         # Check multi-keyword integer types (does not match unconventional styles such as `int long untyped long`)
         # duplicate `int_type` capture name is intentional
         if /\A((?<unsigned>un)?signed )?((?<int_type>long|short|long long)( int)?|(?<int_type>int|char))\z/ =~ name
-          #noinspection RubyResolve
+          #noinspection RubyResolve RubyMine cannot extract =~ local vars
           int_type.tr!(' ', '_') # namely `long long` -> 'long_long'
-          #noinspection RubyResolve
+          #noinspection RubyResolve RubyMine cannot extract =~ local vars
           unsigned ? :"u#{int_type}" : int_type.to_sym
         else
           # use type map and fallback
@@ -271,7 +286,7 @@ class FFI::UCtags
   # @see #extract_and_process_type
   def composite_type(name)
     type = composite_types.fetch(name.to_sym)
-    #noinspection RubyMismatchedReturnType
+    #noinspection RubyMismatchedReturnType RubyMine cannot follow that `type` can no longer be a Symbol
     type.is_a?(Symbol) ? composite_typedefs.fetch(type) : type
   end
   
@@ -345,14 +360,16 @@ class FFI::UCtags
     namespace = @fields.fetch('struct') { @fields.fetch('union', nil) }
     if namespace
       namespace = namespace.split('::')
-      #noinspection RubyMismatchedArgumentType
-      composite_namespacing[new_struct] = composite_type(namespace.last)
+      prev_namespace = namespace.last #: String
+      puts "\tunder class `#{prev_namespace}`" if $VERBOSE
+      #noinspection RubyMismatchedArgumentType RubyMine ignores inline RBS annotations
+      composite_namespacing[new_struct] = composite_type(prev_namespace)
       depth = namespace.size
     else
       depth = 0
     end
     new_construct(depth) { new_struct.layout(*_1) }
-    #noinspection RubyMismatchedReturnType
+    #noinspection RubyMismatchedReturnType RubyMine ignores inline RBS annotations
     composite_types[name.to_sym] = new_struct
   end
   # Register a typedef. Register in {#library} directly for basic types;
@@ -383,16 +400,19 @@ class FFI::UCtags
   # 
   # @return [Array[Symbol]] list of assigned names in {#composite_types}’s order.
   def const_composites
+    #noinspection RubyMismatchedReturnType RubyMine cannot follow that `type` is a Symbol when set to `name`
     composite_types.map do |name, type|
       # Prefer typedef name
       if type.is_a?(Symbol)
         name = type
         type = composite_typedefs.fetch(type)
       end
-      #noinspection RubyMismatchedArgumentType
+      #noinspection RubyMismatchedArgumentType RubyMine cannot follow that `type` can no longer be a Symbol
       namespace = composite_namespacing.fetch(type, @library) #: Module
+      puts "defining constant for construct `#{name}`" if $VERBOSE
       begin
         namespace.const_set(name, type)
+        name
       rescue NameError # not a capitalized name
         # Capitalize first letter, prefix if cannot
         name = name.to_s
@@ -405,6 +425,7 @@ class FFI::UCtags
         else # struct
           :"S_#{name}"
         end
+        puts "\tas `#{name}`" if $VERBOSE
         namespace.const_set(name, type)
         name
       end
@@ -421,6 +442,7 @@ class FFI::UCtags
   def close
     new_construct # flush the last construct
     const_composites
+    puts 'done' if $VERBOSE
     library # return
   end
 end
