@@ -65,23 +65,23 @@ exit !bytes.zero? # `#qoi_write` returns 0 on failure
   * `s` structure names
   * `u` union names
   * nested structs and unions
-  * currently does not recognize pointer to struct/union typedefs (#7)
+  * currently does not recognize pointer to struct/union typedefs ((#7)[https://github.com/ParadoxV5/FFI-UCtags/issues/7])
 
 ### 🔜 To Do
-* Enums (#1)
+* Enums ((#1)[https://github.com/ParadoxV5/FFI-UCtags/issues/1])
   * `e` enumerators (values inside an enumeration)
   * `g` enumeration names
-* Literal Macros (macro-defined constants) (#2)
+* Literal Macros (macro-defined constants) ((#2)[https://github.com/ParadoxV5/FFI-UCtags/issues/2])
   * `d` macro definitions
-* FFI callbacks (wraps pointer to functions) (#3)
-* Variadic args (#4)
-* Definitions (contrast with *prototypes*, which are declarations only (#6)
+* FFI callbacks (wraps pointer to functions) ((#3)[https://github.com/ParadoxV5/FFI-UCtags/issues/3])
+* Variadic args ((#4)[https://github.com/ParadoxV5/FFI-UCtags/issues/4])
+* Definitions (contrast with *prototypes*, which are declarations only ((#6)[https://github.com/ParadoxV5/FFI-UCtags/issues/6])
   * `f` function definitions
   * `v` variable definitions
   * By convention, though, C headers are supposed to be all declarations and no implementation.
 
 ### ⏳ No Plans Yet
-* Import referenced headers (i.e., nested imports) (#5)
+* Import referenced headers (i.e., nested imports) ((#5)[https://github.com/ParadoxV5/FFI-UCtags/issues/5])
   * `h` included header files
 * Enums that aren’t simply `0...size`
   * Let me or the u-ctags team know if this is a much-wanted feature.
@@ -144,7 +144,7 @@ U-ctags is not a C preprocessor. It currently only follows preprocessing directi
 Preprocessor macros can confuse u-ctags (and consequently this gem) to parse inappropriate constructs,
 especially templates that generate content.
 
-See: https://github.com/universal-ctags/ctags/issues/2356
+See: [universal-ctags/ctags#2356](https://github.com/universal-ctags/ctags/issues/2356)
 
 Meanwhile, patching headers and/or preprocessing them (e.g., `gcc -E`) works this problem around.
 

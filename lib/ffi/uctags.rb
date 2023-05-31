@@ -43,7 +43,7 @@ class FFI::UCtags
     # 
     # The customized module does not have to cover all utilized FFI modules/classes –
     # {.call} will fall back to source from FFI for modules/classes not found from this module (see {.ffi_const}).
-    # However, those that the module do provide must match in layouts and functionalities as those of {FFI}.
+    # However, those the module does provide must match in layouts and functionalities as those of {FFI}.
     # 
     # @return [Module & FFI::Library]
     attr_reader :ffi_module
@@ -122,7 +122,7 @@ class FFI::UCtags
   # * the class [Class] directly
   # * its (newest) {#composite_typedefs} key [Symbol], for structs/unions with typedefs.
   #   * This design allows {#const_composites} to prefer the (newest) typedef alias over the original,
-  #     which is often omitted though the typedef-struct and equivalent patterns.
+  #     which is often omitted through the typedef-struct and equivalent patterns.
   # 
   # @return [Hash[Symbol, Symbol | Class]]
   attr_reader :composite_types
@@ -165,17 +165,17 @@ class FFI::UCtags
   end
   
   
-  # Prepare building a new construct. This method is designed for every new construct to call near the beginning. 
+  # Prepare to build a new construct. This method is designed for every new construct to call near the beginning. 
   # 
   # `Array#slice!` off topmost entries in the {#stack} according to `@fields`.
   # Invoke the procs of the removed entries in reverse order to ensure these previous constructs flush through.
-  # Finally, if a given a block, start a new stack entry with it.
+  # Finally, if given a block, start a new stack entry with it.
   # 
   # {.call} processes a composite construct (e.g., a function or struct) as a sequence of consecutive components,
   # which starts with the construct itself followed by its original-ordered list of members
   # (e.g., function params, struct members), all as separate full-sized entries.
   # Therefore, {#stack a list} must queue the members to compile later until the next sequence commences,
-  # especially that these sequences do not have terminator parts nor a member count in the header entry.
+  # especially since these sequences do not have terminator parts nor a member count in the header entry.
   # 
   # @example
   #   new_construct { do_something_with(construct_members) }
@@ -316,11 +316,11 @@ class FFI::UCtags
   
   # Process the u-ctags entry.
   # 
-  # This is the controller for processing various u-ctags kinds. Due to the popularity,
+  # This is the controller for processing various u-ctags kinds. Due to its popularity,
   # this stores the argument `fields` in `@fields` instead of passing it as an arg when calling helper methods.
   # 
   # For convenience (leading to performance), this method expects entries for composite construct
-  # (e.g., a function or struct) be consecutive. {.call} achieves this by executing u-ctags unsorted,
+  # (e.g., a function or struct) to be consecutive. {.call} achieves this by executing u-ctags unsorted,
   # preserving the order from the original file. See {#new_construct}.
   # 
   # @note
@@ -395,11 +395,11 @@ class FFI::UCtags
   # Assign each struct or union (or enum in future versions) in {#composite_types} to constants.
   # 
   # If the type’s name is invalid (not capitalized), capitalize the first character if possible
-  # (e.g., `qoi_desc` ➡ `Qoi_desc`), fall back to prefixing `S_` or `U_` depending on the type if not.
+  # (e.g., `qoi_desc` ➡ `Qoi_desc`), and fall back to prefixing `S_` or `U_` depending on the type if not.
   # If names collide or the constant is already defined (e.g., due to a previous call to this method),
   # the previous definition is implicitly overridden (with Ruby complaining “already initialized constant”).
   # 
-  # @return [Array[Symbol]] list of assigned names in {#composite_types}’s order.
+  # @return [Array[Symbol]] a list of assigned names in {#composite_types}’s order.
   def const_composites
     #noinspection RubyMismatchedReturnType RubyMine cannot follow that `type` is a Symbol when set to `name`
     composite_types.map do |name, type|
@@ -435,9 +435,9 @@ class FFI::UCtags
   
   # Complete the work of this instance:
   # 1. Finish up any ongoing progress (see {#new_construct})
-  # 2. ({#const_composites Assign structs and unions (and enums in future versions) to constants})
+  # 2. {#const_composites Assign structs and unions (and enums in future versions) to constants}
   # 
-  # @note it is possible, albeit unorthodox, to continue use this instance after `close`ing it.
+  # @note it is possible, albeit unorthodox, to continue using this instance after `close`ing it.
   # 
   # @return [Module & FFI::Library] {#library}
   def close
