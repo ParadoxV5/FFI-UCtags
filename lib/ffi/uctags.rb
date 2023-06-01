@@ -118,7 +118,7 @@ class FFI::UCtags
   # @return [Module & FFI::Library]
   attr_reader :library
   
-  # A hash that maps struct/union (and enum in future versions) names to either:
+  # A hash that maps struct/union names to either:
   # * the class [Class] directly
   # * its (newest) {#composite_typedefs} key [Symbol], for structs/unions with typedefs.
   #   * This design allows {#const_composites} to prefer the (newest) typedef alias over the original,
@@ -130,7 +130,7 @@ class FFI::UCtags
   # 
   # @return [Hash[Symbol, Class]]
   attr_reader :composite_typedefs
-  # A hash that maps inner structs/unions (and enum in future versions) to their outer structs/unions
+  # A hash that maps inner structs/unions to their outer structs/unions
   # 
   # @return [Hash[Class, Class]]
   attr_reader :composite_namespacing
@@ -215,14 +215,14 @@ class FFI::UCtags
   # Extract the type name from `@fields` (see {#process}).
   # 
   # Rips off names of types it nests under as all public names in C live in the same global namespace.
-  # Identify and processes pointers to and arrays of structs or unions (or enums in future versions).
+  # Identify and processes pointers to and arrays of structs or unions.
   # 
   # Do not process the extracted name to a usable `FFI::Type`;
   # follow up with {#find_type} or {#composite_type}, or use {#extract_and_process_type} instead.
   # 
   # @return [[String, bool?]]
   #   * the name of the extracted type,
-  #   * `true` if it’s a struct or union (or enum in future versions), `false` if it’s a pointer to one of those, or `nil` if neither.
+  #   * `true` if it’s a struct or union, `false` if it’s a pointer to one of those, or `nil` if neither.
   def extract_type
     type_type, *_, name = @fields.fetch('typeref').split(':')
     is_pointer = if 'typename'.eql?(type_type) # basic type
@@ -287,7 +287,7 @@ class FFI::UCtags
     end
   end
   
-  # Find the named struct or union (or enum in future versions) from {#composite_types}.
+  # Find the named struct or union from {#composite_types}.
   # 
   # @param name [String]
   # @return [Class]
@@ -303,7 +303,7 @@ class FFI::UCtags
   # 
   # @return [FFI::Type]
   # @raise [TypeError] if it’s a basic type with an unrecognized name
-  # @raise [KeyError] if it’s a struct or union (or enum in future versions) with an unregistered name
+  # @raise [KeyError] if it’s a struct or union with an unregistered name
   def extract_and_process_type
     name, is_pointer = extract_type
     if is_pointer.nil? # basic type
@@ -324,7 +324,7 @@ class FFI::UCtags
   # preserving the order from the original file. See {#new_construct}.
   # 
   # @note
-  #   UCtags holds off from creating access points (constants) for structs/unions (and enums in future versions)
+  #   UCtags holds off from creating access points (constants) for structs/unions
   #   until calling {#const_composites} (or {#close}), as they may later receive a preferred typedef name.
   # 
   # @param k [String] one-letter u-ctags kind ID
@@ -374,7 +374,7 @@ class FFI::UCtags
   end
   
   # Register a typedef. Register in {#library} directly for basic types;
-  # store in `composite_typedefs` (and update `composite_types`) for structs and unions (and enums in future versions).
+  # store in `composite_typedefs` (and update `composite_types`) for structs and unions.
   # 
   # @param name [Symbol] the new name
   # @return [FFI::Type | Class]
@@ -392,7 +392,7 @@ class FFI::UCtags
   end
   
   
-  # Assign each struct or union (or enum in future versions) in {#composite_types} to constants.
+  # Assign each struct or union in {#composite_types} to constants.
   # 
   # If the type’s name is invalid (not capitalized), capitalize the first character if possible
   # (e.g., `qoi_desc` ➡ `Qoi_desc`), and fall back to prefixing `S_` or `U_` depending on the type if not.
@@ -435,7 +435,7 @@ class FFI::UCtags
   
   # Complete the work of this instance:
   # 1. Finish up any ongoing progress (see {#new_construct})
-  # 2. {#const_composites Assign structs and unions (and enums in future versions) to constants}
+  # 2. {#const_composites Assign structs and unions to constants}
   # 
   # @note it is possible, albeit unorthodox, to continue using this instance after `close`ing it.
   # 
