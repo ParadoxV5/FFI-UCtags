@@ -18,7 +18,7 @@ instead relies on code review and small test subjects.
 
 ## Example: QOI
 
-https://github.com/phoboslab/qoi/tree/dfc056e813c98d307238d35f7f041a725d699dfc
+[phoboslab/qoi@dfc056e](https://github.com/phoboslab/qoi/tree/dfc056e813c98d307238d35f7f041a725d699dfc)
 ```ruby
 require 'ffi-uctags'
 
