@@ -88,7 +88,7 @@ class FFI::UCtags
     def call(library_name, header_path, &blk)
       instance = new(library_name)
       #noinspection SpellCheckingInspection this command use letter flags
-      cmd = %w[ctags --language-force=C --param-CPreProcessor._expand --kinds-C=dmpstuxz --fields=NFPkSst --fields-C={macrodef} -nuo -] #: Array[_ToS]
+      cmd = %w[ctags --language-force=C --param-CPreProcessor._expand=1 --kinds-C=dmpstuxz --fields=NFPkSst --fields-C={macrodef} -nuo -] #: Array[_ToS]
       cmd.insert(2, '-V') if $DEBUG
       cmd << header_path
       # Run and pipe-read. `err: :err` connects command stderr to Ruby stderr
