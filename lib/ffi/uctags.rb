@@ -410,7 +410,7 @@ class FFI::UCtags
       end
       #noinspection RubyMismatchedArgumentType RubyMine cannot follow that `type` can no longer be a Symbol
       namespace = composite_namespacing.fetch(type, @library) #: Module
-      puts "defining constant for construct `#{name}`" if $VERBOSE
+      puts "\tdefining constant for construct `#{name}`" if $VERBOSE
       begin
         namespace.const_set(name, type)
         name
@@ -441,6 +441,8 @@ class FFI::UCtags
   # 
   # @return [Module & FFI::Library] {#library}
   def close
+    puts 'finishing up' if $VERBOSE
+    @fields.clear
     new_construct # flush the last construct
     const_composites
     puts 'done' if $VERBOSE
