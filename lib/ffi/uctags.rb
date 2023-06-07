@@ -382,26 +382,29 @@ class FFI::UCtags
   # @return [Class]
   def struct(superclass, name)
     new_struct = Class.new(ffi_const superclass) #: singleton(FFI::Struct)
-    new_composite(name) { new_struct.layout(*_1) }
+    new_composite { new_struct.layout(*_1) }
     #noinspection RubyMismatchedReturnType RubyMine ignores inline RBS annotations
-    new_struct
+    composite_types[name] = new_struct
   end
   
   # Prepare to build a new struct, union or enum.
   # 
-  # @param name [Symbol]
+  # @note
+  #   Does not register the type in {#composite_types} –
+  #   caller need to do that separately (structs/unions) or in the block (enums).
+  # 
   # @yield
   #   a block to build the struct/union/enum once all of the members are in
   #   (like with {#new_construct}, but this method takes care of the `namespace` block arg)
   # @yieldparam members [Array[untyped]] the populated member list
+  # @yieldreturn the new struct/union/enum
   # @return [String?]
   #   The name of the namespace this construct will define under (see {#new_construct})
-  def new_composite(name, &blk)
+  def new_composite(&blk)
     #noinspection RubyMismatchedReturnType RubyMine prefers Yardoc type over RBS type
     new_construct do|members, namespace|
       composite = blk.(members)
       composite_namespacing[composite] = composite_type(namespace) if namespace
-      composite_types[name] = composite
     end
   end
   

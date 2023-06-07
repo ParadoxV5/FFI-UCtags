@@ -1,7 +1,7 @@
 class FFI::UCtags
   type members[T] = Array[T]
-  type composite_type = singleton(FFI::Struct) # or enum in future versions
   type stack_entry[T] = [members[T], ^(members[T] members, String? namespace) -> void, String?]
+  type composite_type = singleton(FFI::Struct) # or enum in future versions
   
   VERSION: String
   
@@ -32,7 +32,7 @@ class FFI::UCtags
   def process: (String k, String name, Hash[String, String] fields) -> void
   
   def struct: (Symbol superclass, Symbol name) -> singleton(FFI::Struct)
-  def new_composite: [T] (Symbol name) ?{ (members[T] members) -> void } -> String?
+  def new_composite: [T] () ?{ (members[T] members) -> void } -> String?
   def typedef: (Symbol name) -> (FFI::Type | composite_type)
   
   def const_composites: () -> Array[Symbol]
