@@ -1,7 +1,7 @@
 class FFI::UCtags
   type members[T] = Array[T]
   type composite_type = singleton(FFI::Struct) # or enum in future versions
-  type stack_entry[T] = [members[T], ^(members[T]) -> void]
+  type stack_entry[T] = [members[T], ^(members[T], String?) -> void, String?]
   
   VERSION: String
   
@@ -21,7 +21,7 @@ class FFI::UCtags
   @fields: Hash[String, String]
   def initialize: (_ToS library_name) -> void
   
-  def new_construct: [T] () ?{ (members[T]) -> void } -> String?
+  def new_construct: [T] () ?{ (members[T], String?) -> void } -> String?
   def stack_push: [T] (*T elements) -> void
   
   def extract_type: () -> [String, bool?]

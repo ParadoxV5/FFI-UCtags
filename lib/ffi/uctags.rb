@@ -138,10 +138,13 @@ class FFI::UCtags
   # A LIFO array for work-in-progress constructs, most notably functions and structs.
   # The stack design enables building an inner construct (top of the stack) while putting outer constructs on hold.
   # 
-  # Each element is a 2-tuple of a construct member queue and a proc (or equivalent).
-  # When ready, the proc is called with the populated member list as a single arg.
+  # Each element is a 3-tuple of
+  # 1. a construct member queue
+  # 2. a proc (or equivalent)
+  # 3. the namespace in which this construct should define under
+  # When ready, the proc is called with the populated member list (as a single arg) and the namespace.
   # 
-  # @return [Array[[Array[untyped], ^(Array[untyped]) -> void]]
+  # @return [Array[[Array[untyped], ^(Array[untyped], String?) -> void, String?]]
   # @see #new_construct
   attr_reader :stack
   
@@ -178,33 +181,39 @@ class FFI::UCtags
   # especially since these sequences do not have terminator parts nor a member count in the header entry.
   # 
   # @example
-  #   new_construct { do_something_with(construct_members) }
+  #   new_construct {|members, namespace| library[namespace].build_construct(members) }
   # 
   # Simpler constructs with only one u-ctags entry can simply call this method with no block (“`nil` block `&nil`”).
   # 
+  # @yield a block to build the desired construct once all of the members are in
+  # @yieldparam members [Array[untyped]] the populated member list
+  # @yieldparam namespace [String?] the namespace in which the construct should define under
   # @return [String?]
-  #   The name of the namespace this construct should define under as parsed from `@fields` (see {#process})
+  #   The name of the namespace this construct will define under as parsed from `@fields` (see {#process})
   def new_construct(&blk)
-    namespace = @fields.fetch('struct') { @fields.fetch('union', nil) }
+    full_namespace = @fields.fetch('struct') { @fields.fetch('union', nil) }
     prev_namespace = nil
-    depth = if namespace
-      namespace = namespace.split('::')
-      prev_namespace = namespace.last #: String
+    depth = if full_namespace
+      full_namespace = full_namespace.split('::')
+      prev_namespace = full_namespace.last #: String
       puts "\tunder `#{prev_namespace}`" if $VERBOSE
-      namespace.size
+      full_namespace.size
     else
       0
     end
     if (prev = stack.slice!(depth..)) and not prev.empty?
       puts "\tflushing #{prev.size} stack entries" if $VERBOSE
-      prev.reverse_each do |args, a_proc|
-        puts "\t\twith #{args.size} members" if $VERBOSE
-        a_proc.(args)
+      prev.reverse_each do |members, a_proc, namespace|
+        if $VERBOSE
+          puts "\t\twith #{members.size} members"
+          puts "\t\tunder `#{namespace}`" if namespace
+        end
+        a_proc.(members, namespace)
       end
     end
     if blk
       puts "\tstarting new stack entry" if $VERBOSE
-      stack << [[], blk]
+      stack << [[], blk, prev_namespace]
     end
     puts "\tstack has #{stack.size} entries" if $VERBOSE
     #noinspection RubyMismatchedReturnType RubyMine prefers Yardoc type over RBS type
@@ -373,8 +382,10 @@ class FFI::UCtags
   # @return [Class]
   def struct(superclass, name)
     new_struct = Class.new(ffi_const superclass) #: singleton(FFI::Struct)
-    prev_namespace = new_construct { new_struct.layout(*_1) }
-    composite_namespacing[new_struct] = composite_type(prev_namespace) if prev_namespace
+    new_construct do|spec, namespace|
+      new_struct.layout(*spec)
+      composite_namespacing[new_struct] = composite_type(namespace) if namespace
+    end
     #noinspection RubyMismatchedReturnType RubyMine ignores inline RBS annotations
     composite_types[name] = new_struct
   end
