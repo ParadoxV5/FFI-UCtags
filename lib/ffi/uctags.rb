@@ -211,6 +211,12 @@ class FFI::UCtags
     prev_namespace
   end
   
+  # `Array#push` the given args to the top of the {#stack}.
+  # 
+  # @return [void]
+  def stack_push(...)
+    stack.last&.first&.push(...)
+  end
   
   # Extract the type name from `@fields` (see {#process}).
   # 
@@ -336,14 +342,14 @@ class FFI::UCtags
     case k
     # Functions
     when 'z' # function parameters inside function or prototype definitions
-      stack.last&.first&.<< extract_and_process_type
+      stack_push extract_and_process_type
     when 'p' # function prototypes
       type = extract_and_process_type # check type and fail fast
       new_construct { library.attach_function name, _1, type }
     # Structs/Unions
     when 'm' # struct, and union members
       new_construct
-      stack.last&.first&.push name.to_sym, extract_and_process_type
+      stack_push name.to_sym, extract_and_process_type
     when 's' # structure names
       struct :Struct, name.to_sym
     when 'u' # union names

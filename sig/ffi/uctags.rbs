@@ -22,6 +22,7 @@ class FFI::UCtags
   def initialize: (_ToS library_name) -> void
   
   def new_construct: [T] () ?{ (members[T]) -> void } -> String?
+  def stack_push: [T] (*T elements) -> void
   
   def extract_type: () -> [String, bool?]
   def find_type: (String name) -> FFI::Type
