@@ -1,5 +1,8 @@
 # Select stubs
 module FFI
+  class Enum
+  end
+  
   module Library
   end
   type library = Module & Library

@@ -1,7 +1,7 @@
 class FFI::UCtags
   type members[T] = Array[T]
   type stack_entry[T] = [members[T], ^(members[T] members, String? namespace) -> void, String?]
-  type composite_type = singleton(FFI::Struct) # or enum in future versions
+  type composite_type = singleton(FFI::Struct) | FFI::Enum
   
   VERSION: String
   
