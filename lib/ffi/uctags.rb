@@ -240,27 +240,26 @@ class FFI::UCtags
   #   * `true` if it’s a struct, union or enum, `false` if it’s a pointer to one of those, or `nil` if neither.
   def extract_type
     type_type, *_, name = @fields.fetch('typeref').split(':')
-    is_composite_pointer = if name.end_with?('[]')
+    if name.end_with?('[]')
       puts "\tarray type" if $VERBOSE
       name = 'pointer' # FFI does not support typed array auto-casting for functions
         # (for struct/union members: https://github.com/ParadoxV5/FFI-UCtags/issues/14)
-      nil
+      is_composite = nil
     elsif 'typename'.eql?(type_type) # basic type or typedef
-      is_ptr = name.end_with?(' *')
-      name_without_star = name.delete_suffix(' *')
+      name_without_star = name.dup
+      is_composite = name_without_star.delete_suffix!(' *').nil? # whether pointer suffix not deleted
       if composite_typedefs.include?(name_without_star.to_sym) # typedef-composite
         name = name_without_star
         puts "\ttypedef `#{name}`" if $VERBOSE
-        is_ptr
       else # basic type
         puts "\tbasic type `#{name}`" if $VERBOSE
-        nil
+        is_composite = nil
       end
     else # non-typedef composite
       puts "\t#{type_type} type `#{name}`" if $VERBOSE
-      name.delete_suffix!(' *').nil? # whether pointer suffix not deleted
+      is_composite = name.delete_suffix!(' *').nil? # whether pointer suffix not deleted
     end
-    [name, is_composite_pointer]
+    [name, is_composite]
   end
   
   # Find the named type from {#library}.
@@ -329,12 +328,12 @@ class FFI::UCtags
   # @raise [TypeError] if it’s a basic type with an unrecognized name
   # @raise [KeyError] if it’s a struct, union or enum with an unregistered name
   def extract_and_process_type
-    name, is_pointer = extract_type
-    if is_pointer.nil? # basic type
+    name, is_composite = extract_type
+    if is_composite.nil? # basic type
       find_type(name)
     else
       type = composite_type(name)
-      is_pointer ? type.by_ref : type.by_value
+      is_composite ? type.by_value : type.by_ref
     end
   end
   
@@ -429,18 +428,18 @@ class FFI::UCtags
   # @return [FFI::Type | singleton(FFI::Struct) | FFI::Enum]
   def typedef(name)
     new_construct
-    type_name, is_pointer = extract_type
-    type = if is_pointer.nil? # basic type
-      find_type(type_name)
+    type_name, is_composite = extract_type
+    if is_composite.nil? # basic type
+      @library.typedef find_type(type_name), name
     else # composite type
-      composite_type(type_name)
-    end
-    if is_pointer == false # composite, not pointer
-      composite_typedefs[name] = type
-      composite_types[type_name.to_sym] = name
-      type
-    else # basic type or composite pointer
-      @library.typedef type, name
+      type = composite_type(type_name)
+      if is_composite # configure typedef name only if not aliasing a pointer
+        composite_typedefs[name] = type
+        composite_types[type_name.to_sym] = name
+        type
+      else
+        @library.typedef type.by_ref, name
+      end
     end
   end
   
