@@ -225,21 +225,30 @@ class FFI::UCtags
   #   * `true` if it’s a struct or union (or enum in future versions), `false` if it’s a pointer to one of those, or `nil` if neither.
   def extract_type
     type_type, *_, name = @fields.fetch('typeref').split(':')
-    is_pointer = if 'typename'.eql?(type_type) # basic type
-      puts "\tbasic type `#{name}`" if $VERBOSE
-      nil
-    elsif name.end_with?('[]') # array
+    is_composite_pointer = if name.end_with?('[]')
       puts "\tarray type" if $VERBOSE
-      name = 'void *' # FFI does not support typed array auto-casting
+      name = 'pointer' # FFI does not support typed array auto-casting for functions
+        # (for struct/union members: https://github.com/ParadoxV5/FFI-UCtags/issues/14)
       nil
-    else
+    elsif 'typename'.eql?(type_type) # basic type or typedef
+      is_ptr = name.end_with?(' *')
+      name_without_star = name.delete_suffix(' *')
+      if composite_typedefs.include?(name_without_star.to_sym) # typedef-composite
+        name = name_without_star
+        puts "\ttypedef `#{name}`" if $VERBOSE
+        is_ptr
+      else # basic type
+        puts "\tbasic type `#{name}`" if $VERBOSE
+        nil
+      end
+    else # non-typedef composite
       puts "\t#{type_type} type `#{name}`" if $VERBOSE
       name.delete_suffix!(' *').nil? # whether pointer suffix not deleted
     end
-    [name, is_pointer]
+    [name, is_composite_pointer]
   end
   
-  # Find the named type from {#library} (or {#composite_typedefs}).
+  # Find the named type from {#library}.
   # 
   # Find typedefs. Do not find structs, unions and enums (future versions); use {#composite_type} for those.
   # Fall back to `TYPE_POINTER` for unrecognized unique names.
@@ -249,54 +258,54 @@ class FFI::UCtags
   # @raise [TypeError] if the basic type is not recognized
   # @see #extract_and_process_type
   def find_type(name)
-    # Find from {#composite_typedefs} first, process if not found
-    composite_typedefs.fetch(name.to_sym) do|name_sym|
-      fallback = false
-      name_sym = case name
-      when /[*\[]/ # `t *`, `t []`, `t (*) []`, `t (*)(…)`, etc.
-        :pointer
-      when '_Bool'
-        :bool
-      when 'long double'
-        :long_double
-      else
-        
-        # Check multi-keyword integer types (does not match unconventional styles such as `int long untyped long`)
-        # duplicate `int_type` capture name is intentional
-        if /\A((?<unsigned>un)?signed )?((?<int_type>long|short|long long)( int)?|(?<int_type>int|char))\z/ =~ name
-          #noinspection RubyResolve RubyMine cannot extract =~ local vars
-          int_type.tr!(' ', '_') # namely `long long` -> 'long_long'
-          #noinspection RubyResolve RubyMine cannot extract =~ local vars
-          unsigned ? :"u#{int_type}" : int_type.to_sym
-        else
-          # use type map and fallback
-          fallback = true
-          name_sym
-        end
-      end
+    fallback = false
+    name_sym = case name
+    when /\*/ # `t *`, t (*) []`, `t (*)(…)`, etc.
+      :pointer
+    when '_Bool'
+      :bool
+    when 'long double'
+      :long_double
+    else
       
-      begin
-        @library.find_type(name_sym)
-      rescue TypeError => e
-        raise e unless fallback
-        # Assume the unknown type is a pointer alias defined in another file.
-        # This should just propagate an exception once multi-file parsing is supported.
-        warn "unrecognized type `#{name}`, falling back to `TYPE_POINTER`"
-        ffi_const :TYPE_POINTER
+      # Check multi-keyword integer types (does not match unconventional styles such as `int long untyped long`)
+      # duplicate `int_type` capture name is intentional
+      if /\A((?<unsigned>un)?signed )?((?<int_type>long|short|long long)( int)?|(?<int_type>int|char))\z/ =~ name
+        #noinspection RubyResolve RubyMine cannot extract =~ local vars
+        int_type.tr!(' ', '_') # namely `long long` -> 'long_long'
+        #noinspection RubyResolve RubyMine cannot extract =~ local vars
+        unsigned ? :"u#{int_type}" : int_type.to_sym
+      else
+        # use type map and fallback
+        fallback = true
+        name.to_sym
       end
+    end
+    
+    begin
+      @library.find_type(name_sym)
+    rescue TypeError => e
+      raise e unless fallback
+      # Assume the unknown type is a pointer alias defined in another file.
+      # This should just propagate an exception once multi-file parsing is supported.
+      warn "unrecognized type `#{name}`, falling back to `TYPE_POINTER`"
+      ffi_const :TYPE_POINTER
     end
   end
   
-  # Find the named struct or union (or enum in future versions) from {#composite_types}.
+  # Find the named struct or union (or enum in future versions) from {#composite_types} or {#composite_typedefs}.
   # 
   # @param name [String]
   # @return [Class]
   # @raise [KeyError] if this name is not registered
   # @see #extract_and_process_type
   def composite_type(name)
-    type = composite_types.fetch(name.to_sym)
+    # Find from {#composite_typedefs} first, process if not found
     #noinspection RubyMismatchedReturnType RubyMine cannot follow that `type` can no longer be a Symbol
-    type.is_a?(Symbol) ? composite_typedefs.fetch(type) : type
+    composite_typedefs.fetch(name.to_sym) do|name_sym|
+      type = composite_types.fetch(name_sym)
+      type.is_a?(Symbol) ? composite_typedefs.fetch(type) : type
+    end
   end
   
   # {#extract_type Extract} and process ({#find_type} or {#composite_type}) the type from `@fields` (see {#process}).
