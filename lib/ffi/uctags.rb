@@ -333,7 +333,11 @@ class FFI::UCtags
       find_type(name)
     else
       type = composite_type(name)
-      is_composite ? type.by_value : type.by_ref
+      if type.is_a? Class
+        is_composite ? type.by_value : type.by_ref
+      else
+        is_composite ? type : @library.find_type(:pointer)
+      end
     end
   end
   
@@ -437,8 +441,10 @@ class FFI::UCtags
         composite_typedefs[name] = type
         composite_types[type_name.to_sym] = name
         type
-      else
+      elsif type.is_a? Class
         @library.typedef type.by_ref, name
+      else
+        @library.typedef :pointer, name
       end
     end
   end
