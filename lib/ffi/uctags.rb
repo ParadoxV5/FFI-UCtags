@@ -390,13 +390,17 @@ class FFI::UCtags
   def typedef(name)
     new_construct
     type_name, is_pointer = extract_type
-    if is_pointer.nil? # basic type
-      @library.typedef find_type(type_name), name
+    type = if is_pointer.nil? # basic type
+      find_type(type_name)
     else # composite type
-      type = composite_type(type_name)
+      composite_type(type_name)
+    end
+    if is_pointer == false # composite, not pointer
       composite_typedefs[name] = type
       composite_types[type_name.to_sym] = name
       type
+    else # basic type or composite pointer
+      @library.typedef type, name
     end
   end
   
