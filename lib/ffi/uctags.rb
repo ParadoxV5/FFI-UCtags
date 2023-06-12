@@ -240,7 +240,7 @@ class FFI::UCtags
   #   * `true` if it’s a struct, union or enum, `false` if it’s a pointer to one of those, or `nil` if neither.
   def extract_type
     type_type, *_, name = @fields.fetch('typeref').split(':')
-    if name.end_with?('[]')
+    if name.end_with?(']')
       puts "\tarray type" if $VERBOSE
       name = 'pointer' # FFI does not support typed array auto-casting for functions
         # (for struct/union members: https://github.com/ParadoxV5/FFI-UCtags/issues/14)
@@ -383,6 +383,8 @@ class FFI::UCtags
     # Miscellaneous
     when 't' # typedefs
       typedef name.to_sym
+    when 'd' # macro definitions
+      # https://github.com/ParadoxV5/FFI-UCtags/issues/2
     when 'x' # external and forward variable declarations
       new_construct
       @library.attach_variable name, extract_and_process_type
