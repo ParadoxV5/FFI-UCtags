@@ -39,7 +39,7 @@ class FFI::UCtags
     # The module for {.call} to source constants (namely modules and classes) from; the default is {FFI}.
     # 
     # Configure this attribute to use an alternate FFI implementation of preference, such as
-    # [FFI-Plus](https://github.com/ParadoxV5/FFI-Plus) or [Nice-FFI](https://github.com/sparkchaser/nice-ffi).
+    # [Nice-FFI](https://github.com/sparkchaser/nice-ffi) or your own subset of patches.
     # 
     # The customized module does not have to cover all utilized FFI modules/classes –
     # {.call} will fall back to source from FFI for modules/classes not found from this module (see {.ffi_const}).
