@@ -1,8 +1,8 @@
-name: GitHub Pages
+name: GitHub Pages with YARD
 on:
   push: 
     branches: [main]
-    paths: [lib/**]
+    paths: [.github/workflows/pages.yml, lib/**]
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -14,8 +14,6 @@ jobs:
     steps:
     
     - uses: actions/checkout@v3
-      with:
-        submodules: recursive
     
     - uses: actions/configure-pages@v3
     

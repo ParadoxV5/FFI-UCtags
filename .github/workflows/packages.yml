@@ -1,4 +1,4 @@
-name: GitHub Packages
+name: GitHub Packages with Gem
 on: {release: {types: [published]}}
 jobs:
   package:
