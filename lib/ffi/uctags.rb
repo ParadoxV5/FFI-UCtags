@@ -428,7 +428,7 @@ class FFI::UCtags
   end
   
   # Register a typedef. Register in {#library} directly for basic types;
-  # store in `composite_typedefs` (and update `composite_types`) for structs, unions and enums.
+  # store in {#composite_typedefs} (and update {#composite_types}) for structs, unions and enums.
   # 
   # @param name [Symbol] the new name
   # @return [FFI::Type | singleton(FFI::Struct) | FFI::Enum]
