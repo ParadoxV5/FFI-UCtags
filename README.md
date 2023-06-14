@@ -54,10 +54,15 @@ exit !bytes.zero? # `#qoi_write` returns 0 on failure
 * Recognition of basic C types (`unsigned char`, `int8_t`, etc.)
 * Function Prototypes
   * `p` function prototypes
+  * `f` function definitions
   * `z` function parameters inside function or prototype definitions
+* Enums
+  * `e` enumerators (values inside an enumeration)
+  * `g` enumeration names
 * Miscellaneous
   * `t` typedefs
   * `x` external and forward variable declarations
+  * `v` variable definitions
 
 ### 📝 Developing
 * Structs/Unions
@@ -65,27 +70,21 @@ exit !bytes.zero? # `#qoi_write` returns 0 on failure
   * `s` structure names
   * `u` union names
   * nested structs and unions
-  * currently does not recognize pointer to struct/union typedefs ([#7](https://github.com/ParadoxV5/FFI-UCtags/issues/7))
+  * currently does not understand array members ([#14](https://github.com/ParadoxV5/FFI-UCtags/issues/14))
+  * currently does not recognize opaque structs/unions ([#16](https://github.com/ParadoxV5/FFI-UCtags/issues/16))
 
 ### 🔜 To Do
-* Enums ([#1](https://github.com/ParadoxV5/FFI-UCtags/issues/1))
-  * `e` enumerators (values inside an enumeration)
-  * `g` enumeration names
 * Literal Macros (macro-defined constants) ([#2](https://github.com/ParadoxV5/FFI-UCtags/issues/2))
   * `d` macro definitions
 * FFI callbacks (wraps pointer to functions) ([#3](https://github.com/ParadoxV5/FFI-UCtags/issues/3))
 * Variadic args ([#4](https://github.com/ParadoxV5/FFI-UCtags/issues/4))
-* Definitions (contrast with *prototypes*, which are declarations only ([#6](https://github.com/ParadoxV5/FFI-UCtags/issues/6))
-  * `f` function definitions
-  * `v` variable definitions
-  * By convention, though, C headers are supposed to be all declarations and no implementation.
-
-### ⏳ No Plans Yet
 * Import referenced headers (i.e., nested imports) ([#5](https://github.com/ParadoxV5/FFI-UCtags/issues/5))
   * `h` included header files
+
+### ⏳ No Plans Yet
+* FFI Types `:string`, `:strptr` and `:buffer_*`
 * Enums that aren’t simply `0...size`
   * Let me or the u-ctags team know if this is a much-wanted feature.
-* FFI Types `:string`, `:strptr` and `:buffer_*`
 * Structs/unions defined inside functions’ parameter list
   * E.g., `void dubious_function(struct { … } data);`
   * They are not recognized by u-ctags
