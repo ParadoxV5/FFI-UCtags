@@ -88,7 +88,7 @@ class FFI::UCtags
     def call(library_name, header_path, &blk)
       instance = new(library_name)
       #noinspection SpellCheckingInspection this command use letter flags
-      cmd = %w[ctags --language-force=C --param-CPreProcessor._expand=1 --kinds-C=degmpstuxz --fields=NFPkSst --fields-C={macrodef} -nuo -] #: Array[_ToS]
+      cmd = %w[ctags --language-force=C --param-CPreProcessor._expand=1 --kinds-C=defgmpstuvxz --fields=NFPkSst --fields-C={macrodef} -nuo -] #: Array[_ToS]
       cmd.insert(2, '-V') if $DEBUG
       cmd << header_path
       # Run and pipe-read. `err: :err` connects command stderr to Ruby stderr
@@ -364,7 +364,7 @@ class FFI::UCtags
     # Functions
     when 'z' # function parameters inside function or prototype definitions
       stack_push extract_and_process_type
-    when 'p' # function prototypes
+    when 'p', 'f' # function prototypes, function definitions
       type = extract_and_process_type # check type and fail fast
       new_construct { library.attach_function name, _1, type }
     # Structs/Unions
@@ -385,7 +385,7 @@ class FFI::UCtags
       typedef name.to_sym
     when 'd' # macro definitions
       # https://github.com/ParadoxV5/FFI-UCtags/issues/2
-    when 'x' # external and forward variable declarations
+    when 'x', 'v' # external and forward variable declarations, variable definitions
       new_construct
       @library.attach_variable name, extract_and_process_type
     else
