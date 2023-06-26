@@ -91,8 +91,7 @@ class FFI::UCtags
       cmd = %w[ctags --language-force=C --param-CPreProcessor._expand=1 --kinds-C=defgmpstuvxz --fields=NFPkSst --fields-C={macrodef} -nuo -] #: Array[_ToS]
       cmd.insert(2, '-V') if $DEBUG
       cmd << header_path
-      # Run and pipe-read. `err: :err` connects command stderr to Ruby stderr
-      IO.popen(cmd, err: :err) do|cmd_out|
+      IO.popen(cmd) do|cmd_out|
         cmd_out.each_line(chomp: true) do|line|
           # Note for maintainers:
           # For compilers’ convenience, C doesn’t allow use before declaration (except for functions pre-C11),
