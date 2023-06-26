@@ -20,6 +20,7 @@ Gem::Specification.new do |spec|
   
   spec.files = Dir['**/*']
   spec.require_paths = ['lib']
+  spec.extensions << 'u-ctags.extconf.rb'
   
   spec.add_dependency 'ffi', '~> 1.15.0'
 end
