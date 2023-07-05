@@ -62,7 +62,6 @@ exit !bytes.zero? # `#qoi_write` returns 0 on failure
 * Miscellaneous
   * `t` typedefs
   * `x` external and forward variable declarations
-  * `v` variable definitions
 
 ### 📝 Developing
 * Structs/Unions
@@ -95,7 +94,9 @@ exit !bytes.zero? # `#qoi_write` returns 0 on failure
 
 ### 🧊 Nope
 * Non-literal Macros (i.e., C code macros)
-* Miscellaneous Ctags Kinds
+* Miscellaneous u-ctags Kinds
+  * `v` variable definitions
+    * Unlike `x`, these are not exported to dynamic libraries (`.so`s).
   * `l` local variables
   * `L` goto labels
 
