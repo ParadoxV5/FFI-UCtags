@@ -4,6 +4,8 @@ class FFI::UCtags
   type composite_type = singleton(FFI::Struct) | FFI::Enum
   
   VERSION: String
+  EXE_ROOT: String
+  EXE_PATH: String
   
   attr_accessor self.ffi_module: Module
   

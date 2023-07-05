@@ -1,11 +1,11 @@
 # frozen_string_literal: true
+require_relative 'lib/ffi/uctags/directory'
 
-prefix = 'u-ctags'
-src = File.join(prefix, 'src')
+src = File.join(FFI::UCtags::EXE_ROOT, 'src')
 steps = {
   File.join(src, 'configure')    => %w[./autogen.sh],
   File.join(src, 'Makefile')     => %W[./configure
-    --prefix=#{File.absolute_path prefix}
+    --prefix=#{FFI::UCtags::EXE_ROOT}
     --disable-readcmd
     --disable-xml
     --disable-json
@@ -14,7 +14,7 @@ steps = {
     --disable-pcre2
     --without-included-regex
   ],
-  File.join(prefix, 'bin/ctags') => %w[make install]
+  FFI::UCtags::EXE_PATH => %w[make install]
 }
 
 steps.each do|filepath, command|
@@ -23,4 +23,4 @@ end
 steps.each_key.each_cons(2) {|dependency, name| file name => dependency }
 
 desc 'configure and make u-ctags'
-task default: [steps.each_key.reverse_each.first]
+task default: [FFI::UCtags::EXE_PATH]

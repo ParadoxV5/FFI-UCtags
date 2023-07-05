@@ -1,6 +1,8 @@
 # frozen_string_literal: true
+
 require 'ffi'
 require_relative 'uctags/version'
+require_relative 'uctags/directory'
 
 
 # Auto-load FFI functions and etc. by parsing a C header file.
@@ -73,7 +75,7 @@ class FFI::UCtags
     def call(library_name, header_path, &blk)
       instance = new(library_name)
       #noinspection SpellCheckingInspection this command use letter flags
-      cmd = %W[#{File.expand_path('../../../u-ctags/bin/ctags', __FILE__)} --language-force=C --param-CPreProcessor._expand=1 --kinds-C=defgmpstuvxz --fields=NFPkSst --fields-C={macrodef} -nuo -]
+      cmd = %W[#{EXE_PATH} --language-force=C --param-CPreProcessor._expand=1 --kinds-C=defgmpstuvxz --fields=NFPkSst --fields-C={macrodef} -nuo -]
       cmd.insert(2, '-V') if $DEBUG
       cmd << header_path
       IO.popen(cmd) do|cmd_out|
