@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 require_relative 'lib/ffi/uctags/directory'
-
 src = File.join(FFI::UCtags::EXE_ROOT, 'src')
+
 steps = {
   File.join(src, 'configure')    => %w[./autogen.sh],
   File.join(src, 'Makefile')     => %W[./configure
@@ -22,5 +22,19 @@ steps.each do|filepath, command|
 end
 steps.each_key.each_cons(2) {|dependency, name| file name => dependency }
 
-desc 'configure and make u-ctags'
+desc '`configure` and `make` the u-ctags submodule'
 task default: [FFI::UCtags::EXE_PATH]
+
+desc 'Reap the u-ctags sources and `bundle install`'
+task :bundle do
+  if File.exist? '.git' # Git/Hub repository
+    system 'git submodule deinit --force u-ctags'
+  else # Downloaded directly
+    File.delete *Dir[File.join src, '**']
+    # Don’t delete the directory itself to match `deinit` behavior
+  end
+  system 'bundle install'
+end
+
+desc 'same as `rake default bundle`'
+task setup: %i[default bundle]
