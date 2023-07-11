@@ -189,7 +189,7 @@ class FFI::UCtags
     end
     if (prev = stack.slice!(depth..)) and not prev.empty?
       puts "\tflushing #{prev.size} stack entries" if $VERBOSE
-      prev.reverse_each do |members, a_proc, namespace|
+      prev.reverse_each do|members, a_proc, namespace|
         if $VERBOSE
           puts "\t\twith #{members.size} members"
           puts "\t\tunder `#{namespace}`" if namespace
@@ -449,7 +449,7 @@ class FFI::UCtags
   def const_composites
     union_class = self.ffi_const :Union
     #noinspection RubyMismatchedReturnType RubyMine cannot follow that `type` is a Symbol when set to `name`
-    composite_types.map do |name, type|
+    composite_types.map do|name, type|
       # Prefer typedef name
       if type.is_a?(Symbol)
         name = type
