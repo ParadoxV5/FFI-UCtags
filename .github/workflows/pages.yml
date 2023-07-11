@@ -25,7 +25,7 @@ jobs:
     - name: Package YARD
       run: bundle exec yard doc
     
-    - uses: actions/upload-pages-artifact@v1
+    - uses: actions/upload-pages-artifact@v2
       with:
         path: doc
   
