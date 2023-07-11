@@ -14,13 +14,11 @@ steps = {
     --disable-pcre2
     --without-included-regex
   ],
-  FFI::UCtags::EXE_PATH => %W[
-    #{ENV.fetch('MAKE') do
+  FFI::UCtags::EXE_PATH =>
+    "#{ENV.fetch('MAKE') do
       require 'etc'
       "make -j #{Etc.nprocessors.ceildiv 2}"
-    end}
-    install
-  ]
+    end} install"
 }
 
 steps.each do|filepath, command|
