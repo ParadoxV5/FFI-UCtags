@@ -10,8 +10,6 @@ updates:
     interval: monthly
 
 - package-ecosystem: bundler
-  #registries: [github]
-  #insecure-external-code-execution: allow
   directory: /
   ignore:
   - update-types: [version-update:semver-patch]
@@ -19,3 +17,8 @@ updates:
   schedule:
     interval: weekly
   assignees: [ParadoxV5]
+
+- package-ecosystem: gitsubmodule
+  directory: /
+  schedule:
+    interval: monthly

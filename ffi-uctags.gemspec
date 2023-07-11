@@ -20,6 +20,8 @@ Gem::Specification.new do |spec|
   
   spec.files = Dir['**/*']
   spec.require_paths = ['lib']
+  spec.extensions << 'Rakefile'
   
   spec.add_dependency 'ffi', '~> 1.15.0'
+  spec.add_dependency 'rake', '~> 13.0.0'
 end

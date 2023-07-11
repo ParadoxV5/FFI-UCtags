@@ -1,9 +1,9 @@
-name: GitHub Packages
+name: GitHub Packages with Gem
 on: {release: {types: [published]}}
 jobs:
   package:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 10
     steps:
     
     - uses: actions/checkout@v3

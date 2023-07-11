@@ -3,3 +3,6 @@
 
 # Ruby
 /Gemfile.lock
+
+# u-ctags output directory
+/u-ctags/bin/

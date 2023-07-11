@@ -1,21 +1,8 @@
 # frozen_string_literal: true
 
-# pre-check – fail fast (raise `LoadError`) if u-ctags not found
-begin
-  IO.popen(%w[ctags --version], err: :err) do|cmd_out|
-    cmd_out = cmd_out.gets
-    if cmd_out
-      puts cmd_out if $VERBOSE
-      break if cmd_out.start_with?('Universal Ctags')
-    end
-    raise LoadError, 'installed `ctags` is not Universal Ctags?'
-  end
-rescue SystemCallError
-  raise LoadError, 'is Universal Ctags installed?'
-end
-
 require 'ffi'
 require_relative 'uctags/version'
+require_relative 'uctags/directory'
 
 
 # Auto-load FFI functions and etc. by parsing a C header file.
@@ -88,11 +75,10 @@ class FFI::UCtags
     def call(library_name, header_path, &blk)
       instance = new(library_name)
       #noinspection SpellCheckingInspection this command use letter flags
-      cmd = %w[ctags --language-force=C --param-CPreProcessor._expand=1 --kinds-C=defgmpstuxz --fields=NFPkSst --fields-C={macrodef} -nuo -] #: Array[_ToS]
+      cmd = %W[#{EXE_PATH} --language-force=C --param-CPreProcessor._expand=1 --kinds-C=defgmpstuxz --fields=NFPkSst --fields-C={macrodef} -nuo -] #: Array[_ToS]
       cmd.insert(2, '-V') if $DEBUG
       cmd << header_path
-      # Run and pipe-read. `err: :err` connects command stderr to Ruby stderr
-      IO.popen(cmd, err: :err) do|cmd_out|
+      IO.popen(cmd) do|cmd_out|
         cmd_out.each_line(chomp: true) do|line|
           # Note for maintainers:
           # For compilers’ convenience, C doesn’t allow use before declaration (except for functions pre-C11),
@@ -203,7 +189,7 @@ class FFI::UCtags
     end
     if (prev = stack.slice!(depth..)) and not prev.empty?
       puts "\tflushing #{prev.size} stack entries" if $VERBOSE
-      prev.reverse_each do |members, a_proc, namespace|
+      prev.reverse_each do|members, a_proc, namespace|
         if $VERBOSE
           puts "\t\twith #{members.size} members"
           puts "\t\tunder `#{namespace}`" if namespace
@@ -463,7 +449,7 @@ class FFI::UCtags
   def const_composites
     union_class = self.ffi_const :Union
     #noinspection RubyMismatchedReturnType RubyMine cannot follow that `type` is a Symbol when set to `name`
-    composite_types.map do |name, type|
+    composite_types.map do|name, type|
       # Prefer typedef name
       if type.is_a?(Symbol)
         name = type
