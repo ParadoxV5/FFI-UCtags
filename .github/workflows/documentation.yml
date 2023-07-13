@@ -1,8 +1,8 @@
-name: GitHub Pages with YARD
+name: Generate Documentation with YARD
 on:
-  push: 
+  push:
     branches: [main]
-    paths: [.github/workflows/pages.yml, lib/**]
+    paths: [.github/workflows/documentation.yml, lib/**, README.md]
 concurrency:
   group: pages
   cancel-in-progress: true

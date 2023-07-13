@@ -16,7 +16,6 @@ updates:
     dependency-name: '*'
   schedule:
     interval: weekly
-  assignees: [ParadoxV5]
 
 - package-ecosystem: gitsubmodule
   directory: /
