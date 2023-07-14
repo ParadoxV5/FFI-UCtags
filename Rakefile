@@ -22,7 +22,7 @@ steps = {
 }
 
 steps.each do|filepath, command|
-  file(filepath) { system(*command, chdir: src, exception: true) }
+  file(filepath) { sh(*command, chdir: src) }
 end
 steps.each_key.each_cons(2) {|dependency, name| file name => dependency }
 
@@ -32,13 +32,13 @@ task default: [FFI::UCtags::EXE_PATH]
 desc 'Reap the u-ctags sources and `bundle install`'
 task :bundle do
   if File.exist? '.git' # Git/Hub repository
-    system 'git submodule deinit --force u-ctags'
+    sh 'git submodule deinit --force u-ctags'
   else # Downloaded directly
     puts "Clearing directory '#{src}'"
     File.delete *Dir[File.join src, '**']
     # Don’t delete the directory itself to match `deinit` behavior
   end
-  system 'bundle install'
+  sh 'bundle install'
 end
 
 desc 'same as `rake default bundle`'
