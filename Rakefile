@@ -7,7 +7,7 @@ require_relative 'lib/ffi/uctags/directory'
 src = File.join(FFI::UCtags::EXE_ROOT, 'src')
 
 steps = {
-  File.join(src, 'configure') => %w[./autogen.sh],
+  File.join(src, 'configure') => './autogen.sh',
   File.join(src, 'Makefile')  => %W[./configure
     --prefix=#{FFI::UCtags::EXE_ROOT}
     --disable-readcmd
@@ -21,7 +21,7 @@ steps = {
   FFI::UCtags::EXE_PATH =>
     "#{ENV.fetch('MAKE') do
       require 'etc'
-      "make -j #{Etc.nprocessors.ceildiv 2}"
+      "make -j #{Etc.nprocessors/2 + 1}"
     end} install"
 }
 
