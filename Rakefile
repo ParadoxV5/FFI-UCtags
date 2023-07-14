@@ -33,6 +33,7 @@ desc 'Reap the u-ctags sources and `bundle install`'
 task :bundle do
   if File.exist? '.git' # Git/Hub repository
     sh 'git submodule deinit --force u-ctags'
+    sh 'git config submodule.u-ctags.active false'
   else # Downloaded directly
     puts "Clearing directory '#{src}'"
     File.delete *Dir[File.join src, '**']
