@@ -97,6 +97,10 @@ remember that we still gotta comply with that source code requirement of
 If you checked the repository out via Git/Hub, simply reload the submodule with the following or similar command.
 If not – you’ll have to [re-download](https://github.com/universal-ctags/ctags) if you don’t have a backup (good luck). 
 
+```shell
+git submodule update u-ctags
+```
+
 
 ## Features
 
