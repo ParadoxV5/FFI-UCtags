@@ -1,4 +1,8 @@
 # frozen_string_literal: true
+
+
+# Building Tasks #
+
 require_relative 'lib/ffi/uctags/directory'
 src = File.join(FFI::UCtags::EXE_ROOT, 'src')
 
@@ -43,3 +47,21 @@ end
 
 desc 'same as `rake default bundle`'
 task setup: %i[default bundle]
+
+
+# Development Tasks #
+
+begin
+  require 'minitest/test_task'
+  # Create the following tasks:
+  # * test          : run tests
+  # * test:cmd      : print the testing command
+  # * test:isolated : run tests independently to surface order dependencies
+  # * test:deps     : (alias of test:isolated)
+  # * test:slow     : run tests and reports the slowest 25
+  Minitest::TestTask.create 'test', default: false
+rescue ArgumentError => e
+  raise LoadError, 'Please do `bundle exec rake` for the time being.', cause: e
+rescue LoadError
+  warn 'Minitest not installed. Testing tasks not available.'
+end
