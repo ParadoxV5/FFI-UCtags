@@ -1,9 +1,9 @@
 name: Test with Minitest
 on:
   push:
-    paths: [.github/workflows/test.yml, lib/**, test/**, '*.gemspec']
+    paths: [.github/workflows/test.yml, lib/**, test/**, Gemfile, '*.gemspec']
   pull_request:
-    paths: [.github/workflows/test.yml, lib/**, test/**, '*.gemspec']
+    paths: [.github/workflows/test.yml, lib/**, test/**, Gemfile, '*.gemspec']
 jobs:
   
   test:
@@ -24,8 +24,6 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby-version }}
         bundler-cache: true
-      env:
-        BUNDLE_RUBYGEMS__PKG__GITHUB__COM: Bearer:${{ github.token }}
     
     - name: Test with Minitest
       run: bundle exec rake test:isolated

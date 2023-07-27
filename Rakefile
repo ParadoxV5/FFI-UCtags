@@ -59,9 +59,7 @@ begin
   # * test:isolated : run tests independently to surface order dependencies
   # * test:deps     : (alias of test:isolated)
   # * test:slow     : run tests and reports the slowest 25
-  Minitest::TestTask.create 'test', default: false
-rescue ArgumentError => e
-  raise LoadError, 'Please do `bundle exec rake` for the time being.', cause: e
+  Minitest::TestTask.create
 rescue LoadError
   warn 'Minitest not installed. Testing tasks not available.'
 end
