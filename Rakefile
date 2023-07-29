@@ -27,7 +27,9 @@ end
 steps.each_key.each_cons(2) {|dependency, name| file name => dependency }
 
 desc '`configure` and `make` the u-ctags submodule'
-task default: [FFI::UCtags::EXE_PATH]
+task 'u-ctags': [FFI::UCtags::EXE_PATH]
+desc 'same as `rake u-ctags`'
+task default: %i[u-ctags]
 
 desc 'Reap the u-ctags sources and `bundle install`'
 task :bundle do
@@ -42,5 +44,5 @@ task :bundle do
   sh 'bundle install'
 end
 
-desc 'same as `rake default bundle`'
-task setup: %i[default bundle]
+desc 'same as `rake u-ctags bundle`'
+task setup: %i[u-ctags bundle]
