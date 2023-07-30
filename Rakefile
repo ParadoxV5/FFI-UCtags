@@ -1,9 +1,13 @@
 # frozen_string_literal: true
+
+
+# Building Tasks #
+
 require_relative 'lib/ffi/uctags/directory'
 src = File.join(FFI::UCtags::EXE_ROOT, 'src')
 
 steps = {
-  File.join(src, 'configure') => %w[./autogen.sh],
+  File.join(src, 'configure') => './autogen.sh',
   File.join(src, 'Makefile')  => %W[./configure
     --prefix=#{FFI::UCtags::EXE_ROOT}
     --disable-readcmd
@@ -17,7 +21,7 @@ steps = {
   FFI::UCtags::EXE_PATH =>
     "#{ENV.fetch('MAKE') do
       require 'etc'
-      "make -j #{Etc.nprocessors.ceildiv 2}"
+      "make -j #{Etc.nprocessors/2 + 1}"
     end} install"
 }
 
@@ -46,3 +50,19 @@ end
 
 desc 'same as `rake u-ctags bundle`'
 task setup: %i[u-ctags bundle]
+
+
+# Development Tasks #
+
+begin
+  require 'minitest/test_task'
+  # Create the following tasks:
+  # * test          : run tests
+  # * test:cmd      : print the testing command
+  # * test:isolated : run tests independently to surface order dependencies
+  # * test:deps     : (alias of test:isolated)
+  # * test:slow     : run tests and reports the slowest 25
+  Minitest::TestTask.create
+rescue LoadError
+  warn 'Minitest not installed. Testing tasks not available.'
+end
