@@ -25,12 +25,14 @@ class FFI::UCtags
   class << self
     # The module for {.call} to source constants (namely modules and classes) from; the default is {FFI}.
     # 
-    # Configure this attribute to use an alternate FFI implementation of preference, such as
-    # [Nice-FFI](https://github.com/sparkchaser/nice-ffi) or your own subset of patches.
-    # 
     # The customized module does not have to cover all utilized FFI modules/classes –
     # {.call} will fall back to source from FFI for modules/classes not found from this module (see {.ffi_const}).
     # However, those the module does provide must match in layouts and functionalities as those of {FFI}.
+    # 
+    # @deprecated This was originally designed to integrate with alternate FFI implementations such as
+    # [Nice-FFI](https://github.com/sparkchaser/nice-ffi) or another custom subset of patches.
+    # However, the OG FFI library have grown to be a complete platform,
+    # to the point that contributing into FFI is more practical than developing mods that may one day go obsolete.
     # 
     # @return [Module & FFI::Library]
     attr_reader :ffi_module
@@ -42,6 +44,8 @@ class FFI::UCtags
     end
     
     # Look up the named constant from {.ffi_module} or its ancestors, or from {FFI} if not found in that module.
+    # 
+    # @deprecated (see .ffi_module)
     # 
     # @param name [Symbol | string]
     # @return [bot]
@@ -96,6 +100,7 @@ class FFI::UCtags
   self.ffi_module = FFI
   
   # Instance-level delegate for {.ffi_const}
+  # @deprecated (see .ffi_const)
   def ffi_const(...) = self.class.ffi_const(...)
   
   
