@@ -7,7 +7,7 @@ class FFI::UCtags::UnitTest < Minitest::Spec
   
   # Subclass with patches for assisting testing
   class UCtags < FFI::UCtags
-    def self.new = super LIBRARY
+    def self.new = super(LIBRARY)
     attr_accessor :fields
   end
   
