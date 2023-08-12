@@ -1,0 +1,10 @@
+class FFI::UCtags::UnitTest < Minitest::Spec
+  LIBRARY: String
+  
+  class UCtags < FFI::UCtags
+    public def self.new: () -> instance
+    attr_accessor fields: Hash[String, String]
+  end
+  
+  @instance: UCtags
+end
