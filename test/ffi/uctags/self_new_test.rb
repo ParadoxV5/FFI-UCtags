@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 require_relative '.unit_test'
 class FFI::UCtags::UnitTest
-  describe 'constructor' do
+  describe 'self.new' do
     
     it 'loads the given library' do
       assert_includes @instance.library.ffi_libraries.map(&:name), LIBRARY
     end
+    
     it 'initializes instance variables' do
       {
         composite_types: Hash,
