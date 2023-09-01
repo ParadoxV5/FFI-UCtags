@@ -131,9 +131,9 @@ class FFI::UCtags
   # 
   # Each element is a 3-tuple of
   # 1. a construct member queue
-  # 2. a proc (or equivalent)
+  # 2. a proc (or equivalent) callback
   # 3. the namespace in which this construct should define under
-  # When ready, the proc is called with the populated member list (as a single arg) and the namespace.
+  # When ready, the callback is called with the populated member list (as a single arg) and the namespace.
   # 
   # @return [Array[[Array[untyped], ^(Array[untyped], String?) -> void, String?]]
   # @see #new_construct
@@ -162,7 +162,7 @@ class FFI::UCtags
   # Prepare to build a new construct. This method is designed for every new construct to call near the beginning. 
   # 
   # `Array#slice!` off topmost entries in the {#stack} according to `@fields`.
-  # Invoke the procs of the removed entries in reverse order to ensure these previous constructs flush through.
+  # Invoke the callbacks of the removed entries in reverse order to ensure these previous constructs flush through.
   # Finally, if given a block, start a new stack entry with it.
   # 
   # {.call} processes a composite construct (e.g., a function or struct) as a sequence of consecutive components,
@@ -192,7 +192,7 @@ class FFI::UCtags
     else
       0
     end
-    if (prev = stack.slice!(depth..)) and not prev.empty?
+    if (prev = stack.slice!(depth..)) and !prev.empty?
       puts "\tflushing #{prev.size} stack entries" if $VERBOSE
       prev.reverse_each do|members, a_proc, namespace|
         if $VERBOSE
