@@ -25,6 +25,6 @@ Gem::Specification.new do |spec|
   spec.extensions << 'Rakefile'
   
   spec.required_ruby_version = '>= 3'
-  spec.add_dependency 'ffi', '~> 1.15.0'
+  spec.add_dependency 'ffi', '>= 1.15', '< 1.17'
   spec.add_dependency 'rake', '~> 13.0.0'
 end
